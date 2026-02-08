@@ -263,14 +263,15 @@ export function parseSvgMarkup(svgMarkup: string, id: string): GlyphDef | null {
 
   return {
     id,
-    name: `Row ${id}`,
+    name: 'Imported SVG',
     viewBox: viewBox || `0 0 ${width} ${height}`,
-    width,
-    height,
+    width: width || QUADRAT,
+    height: height || QUADRAT,
     body: svg.innerHTML,
     source: 'imported',
   }
 }
+
 
 async function fetchGlyphSourcesFromApi(apiUrl: string): Promise<GlyphSource[]> {
   const sources: GlyphSource[] = []

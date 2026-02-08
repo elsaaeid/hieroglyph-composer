@@ -6,6 +6,7 @@ import {
   fetchGlyphDefinitionsFromApi,
   layoutRows,
   parseSvgFromHtml,
+  parseSvgMarkup,
   readClipboard,
   writeClipboard,
 } from './svgUtils'
@@ -29,6 +30,8 @@ function EditorApp() {
   const pageSize = 10
   const [toast, setToast] = useState<string | null>(null)
   const [activeRowIndex, setActiveRowIndex] = useState(0)
+  const [showPasteFallback, setShowPasteFallback] = useState(false)
+  const [pasteFallbackText, setPasteFallbackText] = useState('')
 
   const showToast = (message: string) => {
     setToast(message)
@@ -201,6 +204,41 @@ function EditorApp() {
     setStatus('Deleted selection')
   }
 
+  const handlePasteTextInput = (text: string): boolean => {
+    if (text.includes('<svg')) {
+      const customId = `IMPORTED_${Date.now()}`
+      const parsed = parseSvgMarkup(text, customId)
+      if (parsed) {
+        setCustomGlyphs((prev) => [...prev, parsed])
+        setRows((prev) =>
+          prev.map((row, index) =>
+            index === activeRowIndex ? [...row, createInstance(parsed.id)] : row
+          )
+        )
+        setStatus('Imported SVG markup as a glyph')
+        return true
+      }
+    }
+
+    const ids = text
+      .split(/\s+/)
+      .map((value) => value.trim())
+      .filter((value) => value.length > 0)
+    const knownIds = ids.filter((id) => glyphMap.has(id))
+    if (knownIds.length > 0) {
+      setRows((prev) =>
+        prev.map((row, index) =>
+          index === activeRowIndex ? [...row, ...knownIds.map((glyphId) => createInstance(glyphId))] : row
+        )
+      )
+      setStatus(`Pasted ${knownIds.length} glyph ids`)
+      return true
+    }
+
+    setStatus('Paste contained no recognized glyphs')
+    return false
+  }
+
   const handleCopy = async (preset: CopyPreset) => {
     const allInstances = rows.flat()
     const targets =
@@ -283,36 +321,24 @@ function EditorApp() {
       }
 
       if (text) {
-        const ids = text
-          .split(/\s+/)
-          .map((value) => value.trim())
-          .filter((value) => value.length > 0)
-        const knownIds = ids.filter((id) => glyphMap.has(id))
-        if (knownIds.length > 0) {
-          setRows((prev) =>
-            prev.map((row, index) =>
-              index === activeRowIndex ? [...row, ...knownIds.map((glyphId) => createInstance(glyphId))] : row
-            )
-          )
-          setStatus(`Pasted ${knownIds.length} glyph ids`)
-          return
-        }
+        if (handlePasteTextInput(text)) return
       }
 
       setStatus('Paste contained no recognized glyphs')
     } catch (error) {
-      setStatus('Paste failed: clipboard blocked')
+      setShowPasteFallback(true)
+      setStatus('Clipboard blocked. Paste manually below.')
       console.error(error)
     }
   }
 
   return (
     <div
-      className="relative min-h-screen bg-[radial-gradient(circle_at_20%_20%,rgba(212,160,74,0.18),transparent_45%),radial-gradient(circle_at_85%_10%,rgba(29,59,47,0.15),transparent_40%),linear-gradient(135deg,#f7f1e2_0%,#efe6d3_60%,#f4efe0_100%)] flex flex-col gap-6 px-8 pb-7 pt-28"
+      className="relative min-h-screen bg-[radial-gradient(circle_at_20%_20%,rgba(212,160,74,0.18),transparent_45%),radial-gradient(circle_at_85%_10%,rgba(29,59,47,0.15),transparent_40%),linear-gradient(135deg,#f7f1e2_0%,#efe6d3_60%,#f4efe0_100%)] flex flex-col gap-6 px-8 pb-7 pt-28 max-sm:pt-50 max-md:pt-50"
       dir="ltr"
     >
       <EditorHeader onCopy={handleCopy} onPaste={handlePaste} />
-      <div className="mt-3 flex flex-col gap-6 lg:flex-row">
+        <div className="mt-3 flex flex-col gap-6 lg:flex-row">
         <div className="lg:w-72 lg:shrink-0">
           <GlyphLibrary
             glyphs={pagedGlyphs}
@@ -337,6 +363,51 @@ function EditorApp() {
             onClearSelection={clearSelection}
             onDelete={handleDelete}
           />
+          {showPasteFallback && (
+            <section className="rounded-2xl border border-emerald-900/15 bg-white/80 p-4 shadow-sm">
+              <div className="flex items-center justify-between text-sm font-semibold text-emerald-950">
+                <span>Paste Fallback</span>
+                <button
+                  className="text-xs font-semibold text-emerald-900"
+                  onClick={() => setShowPasteFallback(false)}
+                  type="button"
+                >
+                  Close
+                </button>
+              </div>
+              <p className="mt-1 text-xs text-stone-600">
+                Clipboard access was blocked. Paste SVG markup or glyph IDs below.
+              </p>
+              <textarea
+                className="mt-3 w-full resize-none rounded-xl border border-emerald-900/20 bg-amber-50/40 px-3 py-2 text-sm text-emerald-900 focus:outline-none focus:ring-2 focus:ring-amber-300"
+                rows={4}
+                value={pasteFallbackText}
+                placeholder="<svg ...>...</svg> or A1 D36 G17"
+                onChange={(event) => setPasteFallbackText(event.target.value)}
+              />
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  className="cursor-pointer rounded-full bg-emerald-900 px-4 py-2 text-sm font-semibold text-amber-50 shadow transition hover:-translate-y-0.5 hover:shadow-[0_10px_20px_rgba(29,59,47,0.2)]"
+                  onClick={() => {
+                    if (handlePasteTextInput(pasteFallbackText)) {
+                      setPasteFallbackText('')
+                      setShowPasteFallback(false)
+                    }
+                  }}
+                  type="button"
+                >
+                  Import Paste
+                </button>
+                <button
+                  className="cursor-pointer rounded-full border border-emerald-900/30 px-4 py-2 text-sm font-semibold text-emerald-900 transition hover:-translate-y-0.5"
+                  onClick={() => setPasteFallbackText('')}
+                  type="button"
+                >
+                  Clear
+                </button>
+              </div>
+            </section>
+          )}
           <EditorCanvas
             layout={layout}
             glyphs={glyphs}
