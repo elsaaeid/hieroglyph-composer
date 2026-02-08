@@ -250,7 +250,7 @@ function EditorApp() {
 
     const exportScale = preset === 'wysiwyg' ? zoom : PRESET_SCALES[preset]
     const svg = buildExportSvg(rows, glyphMap, cellStep, exportScale, selectedIds)
-    const text = targets.map((item) => item.glyphId).join(' ')
+    const text = ''
 
     try {
       const mode = await writeClipboard(svg, text)
