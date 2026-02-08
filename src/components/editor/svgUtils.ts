@@ -58,6 +58,21 @@ export function buildExportSvg(
   const width = maxCol * cellStep
   const height = maxRow * cellStep
 
+  const usedGlyphs = Array.from(
+    new Map(
+      layout
+        .map((item) => {
+          const glyph = glyphMap.get(item.instance.glyphId)
+          return glyph ? [glyph.id, glyph] : null
+        })
+        .filter(Boolean) as Array<[string, GlyphDef]>
+    ).values()
+  )
+
+  const defs = usedGlyphs
+    .map((glyph) => `<symbol id="glyph-${glyph.id}" viewBox="${glyph.viewBox}">${glyph.body}</symbol>`)
+    .join('')
+
   const body = layout
     .map((item) => {
       const glyph = glyphMap.get(item.instance.glyphId)
@@ -66,8 +81,15 @@ export function buildExportSvg(
       return `
         <g
           transform="${transform}"
+          data-glyph-id="${item.instance.glyphId}"
+          data-rotate="${item.instance.rotate}"
+          data-flip-x="${item.instance.flipX}"
+          data-flip-y="${item.instance.flipY}"
+          data-scale="${item.instance.scale}"
+          data-offset-x="${item.instance.offsetX ?? 0}"
+          data-offset-y="${item.instance.offsetY ?? 0}"
         >
-          ${glyph.body}
+          <use href="#glyph-${glyph.id}" />
         </g>
       `.trim()
     })
@@ -80,6 +102,7 @@ export function buildExportSvg(
       width="${width * exportScale}"
       height="${height * exportScale}"
     >
+      <defs>${defs}</defs>
       ${body}
     </svg>
   `.trim()
@@ -196,8 +219,8 @@ export function parseSvgFromHtml(
           flipX: group.getAttribute('data-flip-x') === 'true',
           flipY: group.getAttribute('data-flip-y') === 'true',
           scale: Number(group.getAttribute('data-scale') ?? 1),
-          offsetX: 0,
-          offsetY: 0,
+          offsetX: Number(group.getAttribute('data-offset-x') ?? 0),
+          offsetY: Number(group.getAttribute('data-offset-y') ?? 0),
         }
       })
       .filter(Boolean) as GlyphInstance[]

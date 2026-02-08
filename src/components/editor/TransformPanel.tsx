@@ -1,6 +1,3 @@
-import type { GlyphDef, GlyphInstance } from './types'
-import TransformStage from './TransformStage'
-
 type TransformPanelProps = {
   selectedCount: number
   scaleValue: number | null
@@ -9,12 +6,6 @@ type TransformPanelProps = {
   onFlipY: () => void
   onScale: (value: number) => void
   onCopyExternal: () => void
-  selectedInstances: GlyphInstance[]
-  glyphMap: Map<string, GlyphDef>
-  cellStep: number
-  onTranslate: (dx: number, dy: number) => void
-  onSetRotate: (value: number) => void
-  onSetScale: (value: number) => void
 }
 
 function TransformPanel({
@@ -25,12 +16,6 @@ function TransformPanel({
   onFlipY,
   onScale,
   onCopyExternal,
-  selectedInstances,
-  glyphMap,
-  cellStep,
-  onTranslate,
-  onSetRotate,
-  onSetScale,
 }: TransformPanelProps) {
   return (
     <aside className="transform-scroll min-w-0 rounded-2xl bg-white/90 p-5 shadow-[0_18px_36px_rgba(27,26,23,0.12)] flex flex-col gap-4 sticky top-28 self-start max-h-[calc(100vh-140px)] overflow-y-auto overflow-x-hidden z-20 max-[1100px]:static max-[1100px]:max-h-none">
@@ -38,14 +23,6 @@ function TransformPanel({
         <h2 className="text-lg font-semibold text-emerald-950">Transform</h2>
         <p className="text-sm text-stone-600">Applies to selected glyphs.</p>
       </div>
-      <TransformStage
-        selected={selectedInstances}
-        glyphMap={glyphMap}
-        cellStep={cellStep}
-        onTranslate={onTranslate}
-        onSetRotate={onSetRotate}
-        onSetScale={onSetScale}
-      />
       <div className="flex flex-wrap gap-2">
         <button
           className="cursor-pointer rounded-full bg-emerald-900 px-4 py-2 text-sm font-semibold text-amber-50 shadow transition hover:-translate-y-0.5 hover:shadow-[0_10px_20px_rgba(29,59,47,0.2)]"
@@ -81,7 +58,7 @@ function TransformPanel({
       </label>
       <div className="border-t border-emerald-900/15 pt-3">
         <h3 className="text-sm font-semibold text-emerald-950">Clipboard</h3>
-        <p className="text-sm text-stone-600">Copying writes SVG markup to the clipboard.</p>
+        <p className="text-sm text-stone-600">Copying writes SVG plus plain-text glyph ids.</p>
         <button
           className="mt-2 cursor-pointer rounded-full border border-emerald-900/30 px-4 py-2 text-sm font-semibold text-emerald-900 transition hover:-translate-y-0.5"
           onClick={onCopyExternal}
