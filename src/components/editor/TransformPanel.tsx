@@ -18,7 +18,7 @@ function TransformPanel({
   onCopyExternal,
 }: TransformPanelProps) {
   return (
-    <aside className="transform-scroll min-w-0 rounded-2xl bg-white/90 p-5 shadow-[0_18px_36px_rgba(27,26,23,0.12)] flex flex-col gap-4 sticky top-28 self-start max-h-[calc(100vh-140px)] overflow-y-auto overflow-x-hidden z-20 max-[1100px]:static max-[1100px]:max-h-none">
+    <aside className="side-panel transform-scroll min-w-0 rounded-2xl bg-white/90 p-5 shadow-[0_18px_36px_rgba(27,26,23,0.12)] flex flex-col gap-4 overflow-y-auto overflow-x-hidden z-20">
       <div>
         <h2 className="text-lg font-semibold text-emerald-950">Transform</h2>
         <p className="text-sm text-stone-600">Applies to selected glyphs.</p>

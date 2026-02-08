@@ -63,3 +63,119 @@
   border-radius: 999px;
   border: 2px solid #f6f0e2;
 }
+
+.app-shell {
+  padding: 7rem 2rem 1.75rem;
+}
+
+.app-main-row {
+  margin-top: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.app-sidebar-left,
+.app-sidebar-right {
+  width: 100%;
+}
+
+.side-panel {
+  position: sticky;
+  top: 7rem;
+  align-self: flex-start;
+  max-height: calc(100vh - 140px);
+}
+
+.header-kicker {
+  font-size: 0.7rem;
+}
+
+.header-title {
+  font-size: 1.875rem;
+}
+
+.header-button {
+  font-size: 0.875rem;
+}
+
+.header-tooltip {
+  font-size: 0.75rem;
+}
+
+@media (max-width: 1100px) {
+  .side-panel {
+    position: static;
+    max-height: none;
+  }
+  .app-shell {
+    padding-top: 10rem;
+  }
+
+}
+
+@media (max-width: 900px) {
+  .app-shell {
+    padding-top: 10.5rem;
+  }
+
+  .app-main-row {
+    margin-top: 0.75rem;
+  }
+}
+@media (max-width: 640px) {
+  .app-shell {
+    padding-top: 10rem;
+  }
+}
+@media (max-width: 600px) {
+  .app-shell {
+    padding-top: 12rem;
+  }
+}
+@media (max-width: 550px) {
+  .app-shell {
+    padding-top: 16rem;
+  }
+}
+@media (max-width: 500px) {
+  .app-shell {
+    padding-top: 14rem;
+  }
+
+  .header-kicker {
+    font-size: 0.62rem;
+  }
+
+  .header-title {
+    font-size: 1.5rem;
+  }
+
+  .header-button {
+    font-size: 0.75rem;
+  }
+
+  .header-tooltip {
+    font-size: 0.7rem;
+  }
+}
+@media (max-width: 412px) {
+  .app-shell {
+    padding-top: 16rem;
+  }
+}
+@media (min-width: 1024px) {
+  .app-main-row {
+    flex-direction: row;
+  }
+
+  .app-sidebar-left {
+    width: 18rem;
+    flex-shrink: 0;
+  }
+
+  .app-sidebar-right {
+    width: 20rem;
+    flex-shrink: 0;
+  }
+}

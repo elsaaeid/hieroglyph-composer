@@ -27,7 +27,7 @@ function GlyphLibrary({
   const canNext = page < pageCount
 
   return (
-    <aside className="min-w-0 rounded-2xl bg-white/90 p-5 shadow-[0_18px_36px_rgba(27,26,23,0.12)] flex flex-col gap-4 sticky top-28 self-start max-h-[calc(100vh-140px)] overflow-hidden max-[1100px]:static max-[1100px]:max-h-none">
+    <aside className="side-panel min-w-0 rounded-2xl bg-white/90 p-5 shadow-[0_18px_36px_rgba(27,26,23,0.12)] flex flex-col gap-4 overflow-hidden">
       <div className="flex flex-col gap-2">
         <h2 className="text-lg font-semibold text-emerald-950">Glyph Library</h2>
         <input

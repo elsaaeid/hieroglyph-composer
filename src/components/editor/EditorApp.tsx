@@ -334,12 +334,12 @@ function EditorApp() {
 
   return (
     <div
-      className="relative min-h-screen bg-[radial-gradient(circle_at_20%_20%,rgba(212,160,74,0.18),transparent_45%),radial-gradient(circle_at_85%_10%,rgba(29,59,47,0.15),transparent_40%),linear-gradient(135deg,#f7f1e2_0%,#efe6d3_60%,#f4efe0_100%)] flex flex-col gap-6 px-8 pb-7 pt-28 max-sm:pt-50 max-md:pt-50"
+      className="app-shell relative min-h-screen bg-[radial-gradient(circle_at_20%_20%,rgba(212,160,74,0.18),transparent_45%),radial-gradient(circle_at_85%_10%,rgba(29,59,47,0.15),transparent_40%),linear-gradient(135deg,#f7f1e2_0%,#efe6d3_60%,#f4efe0_100%)] flex flex-col gap-6"
       dir="ltr"
     >
       <EditorHeader onCopy={handleCopy} onPaste={handlePaste} />
-        <div className="mt-3 flex flex-col gap-6 lg:flex-row">
-        <div className="lg:w-72 lg:shrink-0">
+      <div className="app-main-row">
+        <div className="app-sidebar-left">
           <GlyphLibrary
             glyphs={pagedGlyphs}
             search={search}
@@ -429,7 +429,7 @@ function EditorApp() {
             count={rows.reduce((total, row) => total + row.length, 0)}
           />
         </main>
-        <div className="lg:w-80 lg:shrink-0">
+        <div className="app-sidebar-right">
           <TransformPanel
             selectedCount={selectedIds.length}
             scaleValue={primarySelection ? primarySelection.scale : null}
