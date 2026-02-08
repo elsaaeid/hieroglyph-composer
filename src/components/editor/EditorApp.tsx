@@ -154,6 +154,16 @@ function EditorApp() {
     setStatus('Added new row')
   }
 
+  const removeRow = () => {
+    setRows((prev) => {
+      if (prev.length <= 1) return prev
+      const next = prev.filter((_, index) => index !== activeRowIndex)
+      return next.length > 0 ? next : [[]]
+    })
+    setActiveRowIndex((prev) => (prev > 0 ? prev - 1 : 0))
+    setStatus('Removed row')
+  }
+
   const applyToSelected = (updater: (instance: GlyphInstance) => GlyphInstance) => {
     if (selectedIds.length === 0) return
     setRows((prev) =>
@@ -360,6 +370,7 @@ function EditorApp() {
             activeRow={activeRowIndex}
             onActiveRowChange={setActiveRowIndex}
             onAddRow={addRow}
+            onRemoveRow={removeRow}
             onClearSelection={clearSelection}
             onDelete={handleDelete}
           />

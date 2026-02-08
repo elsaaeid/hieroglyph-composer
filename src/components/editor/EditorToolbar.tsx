@@ -5,6 +5,7 @@ type EditorToolbarProps = {
   activeRow: number
   onActiveRowChange: (value: number) => void
   onAddRow: () => void
+  onRemoveRow: () => void
   onClearSelection: () => void
   onDelete: () => void
 }
@@ -16,6 +17,7 @@ function EditorToolbar({
   activeRow,
   onActiveRowChange,
   onAddRow,
+  onRemoveRow,
   onClearSelection,
   onDelete,
 }: EditorToolbarProps) {
@@ -54,6 +56,13 @@ function EditorToolbar({
           type="button"
         >
           Add Row
+        </button>
+        <button
+          className="cursor-pointer rounded-full border border-emerald-900/30 px-4 py-2 text-sm font-semibold text-emerald-900 transition hover:-translate-y-0.5"
+          onClick={onRemoveRow}
+          type="button"
+        >
+          Remove Row
         </button>
       </div>
       <div className="flex flex-wrap gap-2">
