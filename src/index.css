@@ -80,6 +80,10 @@
   width: 100%;
 }
 
+.app-canvas {
+  width: 100%;
+}
+
 .side-panel {
   position: sticky;
   top: 7rem;
@@ -161,6 +165,11 @@
 }
 @media (max-width: 412px) {
   .app-shell {
+    padding-top: 15rem;
+  }
+}
+@media (max-width: 380px) {
+  .app-shell {
     padding-top: 16rem;
   }
 }
@@ -170,12 +179,17 @@
   }
 
   .app-sidebar-left {
-    width: 18rem;
+    width: 16rem;
     flex-shrink: 0;
   }
 
   .app-sidebar-right {
-    width: 20rem;
+    width: 17rem;
     flex-shrink: 0;
+  }
+
+  .app-canvas {
+    flex: 1 1 0%;
+    min-width: 0;
   }
 }
