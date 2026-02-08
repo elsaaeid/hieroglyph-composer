@@ -1,5 +1,4 @@
 import type { GlyphDef, LayoutItem } from './types'
-import { QUADRAT } from './glyphData'
 import { buildTransform } from './svgUtils'
 
 type EditorCanvasProps = {
@@ -10,6 +9,8 @@ type EditorCanvasProps = {
   viewWidth: number
   viewHeight: number
   zoom: number
+  cellStep: number
+  onAddRow: () => void
   onSelect: (id: string, multi: boolean) => void
   onClearSelection: () => void
 }
@@ -22,20 +23,33 @@ function EditorCanvas({
   viewWidth,
   viewHeight,
   zoom,
+  cellStep,
+  onAddRow,
   onSelect,
   onClearSelection,
 }: EditorCanvasProps) {
+  const safeZoom = Math.max(0.1, zoom)
+  const viewBoxWidth = viewWidth / safeZoom
+  const viewBoxHeight = viewHeight / safeZoom
+
   return (
     <div
-      className="w-full overflow-x-hidden overflow-y-auto rounded-2xl border border-emerald-900/20 bg-gradient-to-br from-[#fdfbf5] to-[#f4efe1] p-2 min-h-[clamp(220px,42vh,420px)]"
+      className="w-full overflow-x-auto overflow-y-auto rounded-2xl border border-emerald-900/20 bg-gradient-to-br from-[#fdfbf5] to-[#f4efe1] min-h-[clamp(220px,42vh,420px)]"
+      tabIndex={0}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault()
+          onAddRow()
+        }
+      }}
       onMouseDown={onClearSelection}
     >
       <svg
-        className="block max-w-full [background-image:linear-gradient(rgba(29,59,47,0.12)_1px,transparent_1px),linear-gradient(90deg,rgba(29,59,47,0.12)_1px,transparent_1px)] [background-size:180px_180px] [shape-rendering:geometricPrecision]"
-        viewBox={`0 0 ${viewWidth} ${viewHeight}`}
-        width={viewWidth * zoom}
-        height={viewHeight * zoom}
+        className="block w-full h-auto max-w-full bg-[linear-gradient(rgba(29,59,47,0.12)_1px,transparent_1px),linear-gradient(90deg,rgba(29,59,47,0.12)_1px,transparent_1px)] [shape-rendering:geometricPrecision]"
+        viewBox={`0 0 ${viewBoxWidth} ${viewBoxHeight}`}
+        preserveAspectRatio="xMinYMin meet"
         xmlns="http://www.w3.org/2000/svg"
+        style={{ backgroundSize: `${cellStep}px ${cellStep}px`, backgroundPosition: '0 0' }}
       >
         <defs>
           {glyphs.map((glyph) => (
@@ -48,7 +62,7 @@ function EditorCanvas({
           const glyph = glyphMap.get(item.instance.glyphId)
           if (!glyph) return null
           const isSelected = selectedIds.includes(item.instance.id)
-          const transform = buildTransform(item, glyph)
+          const transform = buildTransform(item, glyph, cellStep)
           return (
             <g
               key={item.instance.id}
@@ -68,8 +82,8 @@ function EditorCanvas({
                 <rect
                   x={0}
                   y={0}
-                  width={QUADRAT}
-                  height={QUADRAT}
+                  width={cellStep}
+                  height={cellStep}
                   fill="none"
                   stroke="#d4a04a"
                   strokeWidth={40}

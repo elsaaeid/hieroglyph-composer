@@ -1,32 +1,37 @@
 import type { GlyphDef, GlyphInstance, GlyphSource, LayoutItem } from './types'
 import { QUADRAT } from './glyphData'
 
-export function layoutInstances(instances: GlyphInstance[], wrap: number): LayoutItem[] {
-  const safeWrap = Math.max(2, wrap)
-  return instances.map((instance, index) => {
-    const row = Math.floor(index / safeWrap)
-    const col = index % safeWrap
-    return {
-      instance,
-      row,
-      col,
-      x: col * QUADRAT,
-      y: row * QUADRAT,
-    }
+export function layoutRows(rows: GlyphInstance[][], cellStep: number): LayoutItem[] {
+  const items: LayoutItem[] = []
+  rows.forEach((rowItems, rowIndex) => {
+    rowItems.forEach((instance, colIndex) => {
+      items.push({
+        instance,
+        row: rowIndex,
+        col: colIndex,
+        x: colIndex * cellStep,
+        y: rowIndex * cellStep,
+      })
+    })
   })
+  return items
 }
 
-export function buildTransform(item: LayoutItem, glyph: GlyphDef): string {
+export function buildTransform(item: LayoutItem, glyph: GlyphDef, cellStep: number): string {
   const centerX = glyph.width / 2
   const centerY = glyph.height / 2
   const fitScale = QUADRAT / Math.max(glyph.width, glyph.height)
   const flipX = item.instance.flipX ? -1 : 1
   const flipY = item.instance.flipY ? -1 : 1
   const userScale = item.instance.scale
+  const offsetScale = cellStep / QUADRAT
+  const offsetX = (item.instance.offsetX ?? 0) * offsetScale
+  const offsetY = (item.instance.offsetY ?? 0) * offsetScale
 
   return [
     `translate(${item.x} ${item.y})`,
-    `translate(${QUADRAT / 2} ${QUADRAT / 2})`,
+    `translate(${cellStep / 2} ${cellStep / 2})`,
+    `translate(${offsetX} ${offsetY})`,
     `rotate(${item.instance.rotate})`,
     `scale(${flipX * userScale} ${flipY * userScale})`,
     `scale(${fitScale} ${fitScale})`,
@@ -35,51 +40,34 @@ export function buildTransform(item: LayoutItem, glyph: GlyphDef): string {
 }
 
 export function buildExportSvg(
-  instances: GlyphInstance[],
+  rows: GlyphInstance[][],
   glyphMap: Map<string, GlyphDef>,
-  wrap: number,
-  exportScale: number
+  cellStep: number,
+  exportScale: number,
+  selectedIds?: string[]
 ): string {
-  const layout = layoutInstances(instances, wrap)
+  const layout = layoutRows(rows, cellStep).filter((item) =>
+    selectedIds && selectedIds.length > 0 ? selectedIds.includes(item.instance.id) : true
+  )
   if (layout.length === 0) {
     return ''
   }
 
   const maxCol = Math.max(...layout.map((item) => item.col)) + 1
   const maxRow = Math.max(...layout.map((item) => item.row)) + 1
-  const width = maxCol * QUADRAT
-  const height = maxRow * QUADRAT
-
-  const usedGlyphs = Array.from(
-    new Map(
-      layout
-        .map((item) => {
-          const glyph = glyphMap.get(item.instance.glyphId)
-          return glyph ? [glyph.id, glyph] : null
-        })
-        .filter(Boolean) as Array<[string, GlyphDef]>
-    ).values()
-  )
-
-  const defs = usedGlyphs
-    .map((glyph) => `<symbol id="glyph-${glyph.id}" viewBox="${glyph.viewBox}">${glyph.body}</symbol>`)
-    .join('')
+  const width = maxCol * cellStep
+  const height = maxRow * cellStep
 
   const body = layout
     .map((item) => {
       const glyph = glyphMap.get(item.instance.glyphId)
       if (!glyph) return ''
-      const transform = buildTransform(item, glyph)
+      const transform = buildTransform(item, glyph, cellStep)
       return `
         <g
           transform="${transform}"
-          data-glyph-id="${item.instance.glyphId}"
-          data-rotate="${item.instance.rotate}"
-          data-flip-x="${item.instance.flipX}"
-          data-flip-y="${item.instance.flipY}"
-          data-scale="${item.instance.scale}"
         >
-          <use href="#glyph-${glyph.id}" />
+          ${glyph.body}
         </g>
       `.trim()
     })
@@ -92,7 +80,6 @@ export function buildExportSvg(
       width="${width * exportScale}"
       height="${height * exportScale}"
     >
-      <defs>${defs}</defs>
       ${body}
     </svg>
   `.trim()
@@ -136,15 +123,20 @@ export async function readClipboard(): Promise<{ html?: string; text?: string }>
     return { text }
   }
 
-  const items = await navigator.clipboard.read()
-  for (const item of items) {
-    const htmlType = item.types.find((type) => type === 'text/html')
-    const textType = item.types.find((type) => type === 'text/plain')
-    const html = htmlType ? await blobToText(await item.getType(htmlType)) : undefined
-    const text = textType ? await blobToText(await item.getType(textType)) : undefined
-    return { html, text }
+  try {
+    const items = await navigator.clipboard.read()
+    for (const item of items) {
+      const htmlType = item.types.find((type) => type === 'text/html')
+      const textType = item.types.find((type) => type === 'text/plain')
+      const html = htmlType ? await blobToText(await item.getType(htmlType)) : undefined
+      const text = textType ? await blobToText(await item.getType(textType)) : undefined
+      return { html, text }
+    }
+    return {}
+  } catch (error) {
+    const text = await navigator.clipboard.readText()
+    return { text }
   }
-  return {}
 }
 
 export async function fetchGlyphDefinitions(sources: GlyphSource[]): Promise<GlyphDef[]> {
@@ -204,6 +196,8 @@ export function parseSvgFromHtml(
           flipX: group.getAttribute('data-flip-x') === 'true',
           flipY: group.getAttribute('data-flip-y') === 'true',
           scale: Number(group.getAttribute('data-scale') ?? 1),
+          offsetX: 0,
+          offsetY: 0,
         }
       })
       .filter(Boolean) as GlyphInstance[]
@@ -229,6 +223,29 @@ export function parseSvgFromHtml(
   return {
     glyphs: [],
     importedGlyph,
+  }
+}
+
+export function parseSvgMarkup(svgMarkup: string, id: string): GlyphDef | null {
+  const doc = new DOMParser().parseFromString(svgMarkup, 'image/svg+xml')
+  const svg = doc.querySelector('svg')
+  if (!svg) return null
+
+  const viewBox = svg.getAttribute('viewBox')
+  const viewBoxParts = viewBox ? viewBox.split(/\s+/).map(Number) : []
+  const rawWidth = svg.getAttribute('width')
+  const rawHeight = svg.getAttribute('height')
+  const width = viewBoxParts.length === 4 ? viewBoxParts[2] : parseNumber(rawWidth) || QUADRAT
+  const height = viewBoxParts.length === 4 ? viewBoxParts[3] : parseNumber(rawHeight) || QUADRAT
+
+  return {
+    id,
+    name: `Row ${id}`,
+    viewBox: viewBox || `0 0 ${width} ${height}`,
+    width,
+    height,
+    body: svg.innerHTML,
+    source: 'imported',
   }
 }
 

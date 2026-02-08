@@ -7,7 +7,7 @@ type EditorHeaderProps = {
 
 function EditorHeader({ onCopy, onPaste }: EditorHeaderProps) {
   return (
-    <header className="col-span-full flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-white/80 px-6 py-4 shadow-[0_20px_40px_rgba(27,26,23,0.08)] backdrop-blur relative z-30">
+    <header className="fixed left-0 right-0 top-0 z-40 mx-8 flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-white/80 px-6 py-4 shadow-[0_20px_40px_rgba(27,26,23,0.08)] backdrop-blur">
       <div>
         <p className="text-[0.7rem] uppercase tracking-[0.18em] text-stone-500">JSesh-style SVG Editor MVP</p>
         <h1 className="mt-1 font-[Fraunces] text-3xl text-emerald-950">Vector-first Hieroglyph Composer</h1>

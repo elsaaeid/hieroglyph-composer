@@ -4,31 +4,32 @@ import type { CopyPreset, GlyphDef, GlyphInstance } from './types'
 import {
   buildExportSvg,
   fetchGlyphDefinitionsFromApi,
-  layoutInstances,
   parseSvgFromHtml,
+  parseSvgMarkup,
   readClipboard,
   writeClipboard,
 } from './svgUtils'
-import EditorCanvas from './EditorCanvas'
 import EditorHeader from './EditorHeader'
 import EditorToolbar from './EditorToolbar'
 import GlyphLibrary from './GlyphLibrary'
+import RowEditor from './RowEditor'
 import StatusBar from './StatusBar'
 import TransformPanel from './TransformPanel'
 
 function EditorApp() {
   const [remoteGlyphs, setRemoteGlyphs] = useState<GlyphDef[]>([])
   const [customGlyphs, setCustomGlyphs] = useState<GlyphDef[]>([])
-  const [instances, setInstances] = useState<GlyphInstance[]>([])
+  const [rows, setRows] = useState<GlyphInstance[][]>([[]])
+  const [rowTexts, setRowTexts] = useState<string[]>([''])
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [search, setSearch] = useState('')
-  const [wrap, setWrap] = useState(8)
   const [zoom, setZoom] = useState(0.75)
   const [status, setStatus] = useState('Ready')
   const [isLoadingGlyphs, setIsLoadingGlyphs] = useState(false)
   const [page, setPage] = useState(1)
   const pageSize = 10
   const [toast, setToast] = useState<string | null>(null)
+  const [activeRowIndex, setActiveRowIndex] = useState(0)
 
   const showToast = (message: string) => {
     setToast(message)
@@ -96,15 +97,16 @@ function EditorApp() {
     }
   }, [page, safePage])
 
-  const layout = useMemo(() => layoutInstances(instances, wrap), [instances, wrap])
-  const safeWrap = Math.max(2, wrap)
-  const rowCount = Math.max(1, Math.ceil(instances.length / safeWrap))
-  const viewWidth = safeWrap * QUADRAT
-  const viewHeight = rowCount * QUADRAT
+  const maxScale = useMemo(() => {
+    if (rows.length === 0) return 1
+    return Math.max(1, ...rows.flat().map((instance: GlyphInstance) => instance.scale))
+  }, [rows])
+  const cellStep = QUADRAT * maxScale * 1.1
+  const rowCount = Math.max(1, rows.length)
 
   const selectedInstances = useMemo(
-    () => instances.filter((instance) => selectedIds.includes(instance.id)),
-    [instances, selectedIds]
+    () => rows.flat().filter((instance: GlyphInstance) => selectedIds.includes(instance.id)),
+    [rows, selectedIds]
   )
   const primarySelection = selectedInstances[0]
 
@@ -116,6 +118,8 @@ function EditorApp() {
     flipX: false,
     flipY: false,
     scale: 1,
+    offsetX: 0,
+    offsetY: 0,
   })
 
   const setSelection = (id: string, multi: boolean) => {
@@ -131,13 +135,25 @@ function EditorApp() {
   const clearSelection = () => setSelectedIds([])
 
   const addGlyph = (glyphId: string) => {
-    setInstances((prev) => [...prev, createInstance(glyphId)])
+    setRows((prev) =>
+      prev.map((row, index) => (index === activeRowIndex ? [...row, createInstance(glyphId)] : row))
+    )
+    setRowTexts((prev) => prev.map((text, index) => (index === activeRowIndex ? '' : text)))
     setStatus(`Inserted ${glyphId}`)
+  }
+
+  const addRow = () => {
+    setRows((prev) => [...prev, []])
+    setRowTexts((prev) => [...prev, ''])
+    setActiveRowIndex((prev) => prev + 1)
+    setStatus('Added new row')
   }
 
   const applyToSelected = (updater: (instance: GlyphInstance) => GlyphInstance) => {
     if (selectedIds.length === 0) return
-    setInstances((prev) => prev.map((item) => (selectedIds.includes(item.id) ? updater(item) : item)))
+    setRows((prev) =>
+      prev.map((row) => row.map((item) => (selectedIds.includes(item.id) ? updater(item) : item)))
+    )
   }
 
   const handleRotate = () => {
@@ -159,23 +175,77 @@ function EditorApp() {
     applyToSelected((item) => ({ ...item, scale: value }))
   }
 
+  const handleTranslate = (deltaX: number, deltaY: number) => {
+    applyToSelected((item) => ({
+      ...item,
+      offsetX: (item.offsetX ?? 0) + deltaX,
+      offsetY: (item.offsetY ?? 0) + deltaY,
+    }))
+  }
+
+  const handleSetRotate = (value: number) => {
+    applyToSelected((item) => ({ ...item, rotate: value }))
+  }
+
+  const handleSetScale = (value: number) => {
+    applyToSelected((item) => ({ ...item, scale: value }))
+  }
+
   const handleDelete = () => {
     if (selectedIds.length === 0) return
-    setInstances((prev) => prev.filter((item) => !selectedIds.includes(item.id)))
+    setRows((prev) => {
+      const next = prev.map((row) => row.filter((item) => !selectedIds.includes(item.id)))
+      setRowTexts((texts) => texts.map((text, index) => (next[index]?.length ? text : '')))
+      return next
+    })
     setSelectedIds([])
     setStatus('Deleted selection')
   }
 
+  const handleRowTextChange = (rowIndex: number, value: string) => {
+    setRowTexts((prev) => prev.map((text, index) => (index === rowIndex ? value : text)))
+    const trimmed = value.trim()
+    const rowGlyphId = `row-${rowIndex + 1}`
+
+    if (!trimmed) {
+      setRows((prev) => prev.map((row, index) => (index === rowIndex ? [] : row)))
+      setCustomGlyphs((prev) => prev.filter((glyph) => glyph.id !== rowGlyphId))
+      return
+    }
+
+    const parsed = parseSvgMarkup(trimmed, rowGlyphId)
+    if (!parsed) {
+      setStatus(`Row ${rowIndex + 1}: invalid SVG`)
+      return
+    }
+
+    setCustomGlyphs((prev) => {
+      const next = prev.filter((glyph) => glyph.id !== rowGlyphId)
+      return [...next, parsed]
+    })
+
+    setRows((prev) =>
+      prev.map((row, index) => {
+        if (index !== rowIndex) return row
+        const existing = row[0]
+        if (existing?.glyphId === rowGlyphId) return [existing]
+        return [createInstance(rowGlyphId)]
+      })
+    )
+    setStatus(`Row ${rowIndex + 1} SVG updated`)
+  }
+
   const handleCopy = async (preset: CopyPreset) => {
-    const targets = selectedIds.length > 0 ? instances.filter((item) => selectedIds.includes(item.id)) : instances
+    const allInstances = rows.flat()
+    const targets = selectedIds.length > 0 ? allInstances.filter((item) => selectedIds.includes(item.id)) : allInstances
     if (targets.length === 0) {
       setStatus('Nothing to copy')
       return
     }
 
     const exportScale = preset === 'wysiwyg' ? zoom : PRESET_SCALES[preset]
-    const svg = buildExportSvg(targets, glyphMap, wrap, exportScale)
-    const text = targets.map((item) => item.glyphId).join(' ')
+    const svg = buildExportSvg(rows, glyphMap, cellStep, exportScale, selectedIds)
+    const text = ''
 
     try {
       const mode = await writeClipboard(svg, text)
@@ -225,34 +295,33 @@ function EditorApp() {
         if (parseResult?.glyphs.length) {
           const validGlyphs = parseResult.glyphs.filter((item) => glyphMap.has(item.glyphId))
           if (validGlyphs.length > 0) {
-            setInstances((prev) => [...prev, ...validGlyphs])
+            setRows((prev) =>
+              prev.map((row, index) => (index === activeRowIndex ? [...row, ...validGlyphs] : row))
+            )
+            setRowTexts((prev) => prev.map((text, index) => (index === activeRowIndex ? '' : text)))
             setStatus(`Pasted ${validGlyphs.length} glyphs from SVG`)
             return
           }
         }
         if (parseResult?.importedGlyph) {
-          const importedGlyph = parseResult.importedGlyph
-          setCustomGlyphs((prev) => [...prev, importedGlyph])
-          setInstances((prev) => [...prev, createInstance(importedGlyph.id)])
-          setStatus('Imported external SVG as a glyph')
+          const doc = new DOMParser().parseFromString(html, 'text/html')
+          const svg = doc.querySelector('svg')
+          if (svg) {
+            handleRowTextChange(activeRowIndex, svg.outerHTML)
+            setStatus('Pasted SVG into active row')
+            return
+          }
+          setStatus('Paste contained no SVG')
           return
         }
       }
 
       if (text) {
-        const ids = text
-          .split(/\s+/)
-          .map((value) => value.trim())
-          .filter((value) => value.length > 0)
-        const knownIds = ids.filter((id) => glyphMap.has(id))
-        if (knownIds.length > 0) {
-          setInstances((prev) => [...prev, ...knownIds.map((glyphId) => createInstance(glyphId))])
-          setStatus(`Pasted ${knownIds.length} glyph ids`)
-          return
-        }
+        setStatus('Paste requires SVG markup')
+        return
       }
 
-      setStatus('Paste contained no recognized glyphs')
+      setStatus('Paste contained no SVG')
     } catch (error) {
       setStatus('Paste failed: clipboard blocked')
       console.error(error)
@@ -260,50 +329,69 @@ function EditorApp() {
   }
 
   return (
-    <div className="relative min-h-screen bg-[radial-gradient(circle_at_20%_20%,rgba(212,160,74,0.18),transparent_45%),radial-gradient(circle_at_85%_10%,rgba(29,59,47,0.15),transparent_40%),linear-gradient(135deg,#f7f1e2_0%,#efe6d3_60%,#f4efe0_100%)] grid grid-cols-[minmax(240px,280px)_minmax(0,1fr)_minmax(240px,300px)] grid-rows-[auto_1fr] gap-6 px-8 py-7 max-[1100px]:grid-cols-1 max-[1100px]:grid-rows-[auto]">
+    <div
+      className="relative min-h-screen bg-[radial-gradient(circle_at_20%_20%,rgba(212,160,74,0.18),transparent_45%),radial-gradient(circle_at_85%_10%,rgba(29,59,47,0.15),transparent_40%),linear-gradient(135deg,#f7f1e2_0%,#efe6d3_60%,#f4efe0_100%)] flex flex-col gap-6 px-8 pb-7 pt-28"
+      dir="ltr"
+    >
       <EditorHeader onCopy={handleCopy} onPaste={handlePaste} />
-      <GlyphLibrary
-        glyphs={pagedGlyphs}
-        search={search}
-        page={safePage}
-        pageCount={pageCount}
-        totalCount={filteredGlyphs.length}
-        isLoading={isLoadingGlyphs}
-        onSearchChange={setSearch}
-        onPageChange={(nextPage) => setPage(Math.min(Math.max(1, nextPage), pageCount))}
-        onAddGlyph={addGlyph}
-      />
-      <main className="min-w-0 rounded-2xl bg-white/90 p-5 shadow-[0_18px_36px_rgba(27,26,23,0.12)] flex flex-col gap-4 min-h-0">
-        <EditorToolbar
-          wrap={wrap}
-          zoom={zoom}
-          onWrapChange={(value) => setWrap(Math.max(2, value))}
-          onZoomChange={(value) => setZoom(value)}
-          onClearSelection={clearSelection}
-          onDelete={handleDelete}
-        />
-        <EditorCanvas
-          layout={layout}
-          glyphs={glyphs}
-          glyphMap={glyphMap}
-          selectedIds={selectedIds}
-          viewWidth={viewWidth}
-          viewHeight={viewHeight}
-          zoom={zoom}
-          onSelect={setSelection}
-          onClearSelection={clearSelection}
-        />
-        <StatusBar status={status} count={instances.length} />
-      </main>
-      <TransformPanel
-        selectedCount={selectedIds.length}
-        scaleValue={primarySelection ? primarySelection.scale : null}
-        onRotate={handleRotate}
-        onFlipX={handleFlipX}
-        onFlipY={handleFlipY}
-        onScale={handleScale}
-        onCopyExternal={handleCopyExternal}
-      />
+      <div className="mt-3 flex flex-col gap-6 lg:flex-row">
+        <div className="lg:w-72 lg:shrink-0">
+          <GlyphLibrary
+            glyphs={pagedGlyphs}
+            search={search}
+            page={safePage}
+            pageCount={pageCount}
+            totalCount={filteredGlyphs.length}
+            isLoading={isLoadingGlyphs}
+            onSearchChange={setSearch}
+            onPageChange={(nextPage) => setPage(Math.min(Math.max(1, nextPage), pageCount))}
+            onAddGlyph={addGlyph}
+          />
+        </div>
+        <main className="min-w-0 flex-2 rounded-2xl bg-white/90 p-5 shadow-[0_18px_36px_rgba(27,26,23,0.12)] flex flex-col gap-4 min-h-0">
+          <EditorToolbar
+            zoom={zoom}
+            onZoomChange={(value) => setZoom(value)}
+            rowCount={rowCount}
+            activeRow={activeRowIndex}
+            onActiveRowChange={setActiveRowIndex}
+            onAddRow={addRow}
+            onClearSelection={clearSelection}
+            onDelete={handleDelete}
+          />
+          <RowEditor
+            rows={rows}
+            rowTexts={rowTexts}
+            glyphMap={glyphMap}
+            selectedIds={selectedIds}
+            activeRowIndex={activeRowIndex}
+            onRowTextChange={handleRowTextChange}
+            onSelect={setSelection}
+            onActiveRowChange={setActiveRowIndex}
+          />
+          <StatusBar
+            status={status}
+            count={rows.reduce((total, row) => total + row.length, 0)}
+          />
+        </main>
+        <div className="lg:w-80 lg:shrink-0">
+          <TransformPanel
+            selectedCount={selectedIds.length}
+            scaleValue={primarySelection ? primarySelection.scale : null}
+            onRotate={handleRotate}
+            onFlipX={handleFlipX}
+            onFlipY={handleFlipY}
+            onScale={handleScale}
+            onCopyExternal={handleCopyExternal}
+            selectedInstances={selectedInstances}
+            glyphMap={glyphMap}
+            cellStep={cellStep}
+            onTranslate={handleTranslate}
+            onSetRotate={handleSetRotate}
+            onSetScale={handleSetScale}
+          />
+        </div>
+      </div>
       {toast && (
         <div className="pointer-events-none fixed bottom-6 right-6 z-50 rounded-2xl bg-emerald-950 px-4 py-3 text-sm font-semibold text-amber-50 shadow-[0_18px_36px_rgba(27,26,23,0.28)]">
           {toast}

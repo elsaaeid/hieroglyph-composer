@@ -17,6 +17,8 @@ export type GlyphInstance = {
   flipX: boolean
   flipY: boolean
   scale: number
+  offsetX: number
+  offsetY: number
 }
 
 export type LayoutItem = {
@@ -26,6 +28,8 @@ export type LayoutItem = {
   row: number
   col: number
 }
+
+export type FlowDirection = 'row' | 'column'
 
 export type GlyphSource = {
   id: string
