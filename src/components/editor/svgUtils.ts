@@ -18,8 +18,10 @@ export function layoutRows(rows: GlyphInstance[][], cellStep: number): LayoutIte
 }
 
 export function buildTransform(item: LayoutItem, glyph: GlyphDef, cellStep: number): string {
-  const centerX = glyph.viewBoxMinX + glyph.width / 2
-  const centerY = glyph.viewBoxMinY + glyph.height / 2
+  const viewCenterX = glyph.viewBoxMinX + glyph.width / 2
+  const viewCenterY = glyph.viewBoxMinY + glyph.height / 2
+  const rotateCenterX = glyph.contentMinX + glyph.contentWidth / 2
+  const rotateCenterY = glyph.contentMinY + glyph.contentHeight / 2
   const fitScale = QUADRAT / Math.max(glyph.width, glyph.height)
   const flipX = item.instance.flipX ? -1 : 1
   const flipY = item.instance.flipY ? -1 : 1
@@ -33,10 +35,12 @@ export function buildTransform(item: LayoutItem, glyph: GlyphDef, cellStep: numb
     `translate(${item.x} ${item.y})`,
     `translate(${cellStep / 2} ${cellStep / 2})`,
     `translate(${offsetX} ${offsetY})`,
+    `translate(${rotateCenterX} ${rotateCenterY})`,
     `rotate(${item.instance.rotate})`,
+    `translate(${-rotateCenterX} ${-rotateCenterY})`,
     `scale(${flipX * userScaleX} ${flipY * userScaleY})`,
     `scale(${fitScale} ${fitScale})`,
-    `translate(${-centerX} ${-centerY})`,
+    `translate(${-viewCenterX} ${-viewCenterY})`,
   ].join(' ')
 }
 
@@ -224,6 +228,7 @@ export function parseSvgFromHtml(
   const minY = viewBoxParts.length === 4 ? viewBoxParts[1] : 0
   const width = viewBoxParts.length === 4 ? viewBoxParts[2] : Number(svg.getAttribute('width') ?? QUADRAT)
   const height = viewBoxParts.length === 4 ? viewBoxParts[3] : Number(svg.getAttribute('height') ?? QUADRAT)
+  const contentBox = measureSvgContent(svg)
   const importId = `IMPORTED_${Date.now()}`
 
   const importedGlyph: GlyphDef = {
@@ -232,6 +237,10 @@ export function parseSvgFromHtml(
     viewBox: viewBox || `0 0 ${width} ${height}`,
     viewBoxMinX: minX,
     viewBoxMinY: minY,
+    contentMinX: contentBox?.minX ?? minX,
+    contentMinY: contentBox?.minY ?? minY,
+    contentWidth: contentBox?.width ?? width,
+    contentHeight: contentBox?.height ?? height,
     width: width || QUADRAT,
     height: height || QUADRAT,
     body: svg.innerHTML,
@@ -257,6 +266,7 @@ export function parseSvgMarkup(svgMarkup: string, id: string): GlyphDef | null {
   const minY = viewBoxParts.length === 4 ? viewBoxParts[1] : 0
   const width = viewBoxParts.length === 4 ? viewBoxParts[2] : parseNumber(rawWidth) || QUADRAT
   const height = viewBoxParts.length === 4 ? viewBoxParts[3] : parseNumber(rawHeight) || QUADRAT
+  const contentBox = measureSvgContent(svg)
 
   return {
     id,
@@ -264,6 +274,10 @@ export function parseSvgMarkup(svgMarkup: string, id: string): GlyphDef | null {
     viewBox: viewBox || `0 0 ${width} ${height}`,
     viewBoxMinX: minX,
     viewBoxMinY: minY,
+    contentMinX: contentBox?.minX ?? minX,
+    contentMinY: contentBox?.minY ?? minY,
+    contentWidth: contentBox?.width ?? width,
+    contentHeight: contentBox?.height ?? height,
     width: width || QUADRAT,
     height: height || QUADRAT,
     body: svg.innerHTML,
@@ -319,6 +333,7 @@ function parseGlyphFromSvg(svgMarkup: string, source: GlyphSource): GlyphDef {
   const minY = viewBoxParts.length === 4 ? viewBoxParts[1] : 0
   const width = viewBoxParts.length === 4 ? viewBoxParts[2] : parseNumber(rawWidth) || QUADRAT
   const height = viewBoxParts.length === 4 ? viewBoxParts[3] : parseNumber(rawHeight) || QUADRAT
+  const contentBox = measureSvgContent(svg)
 
   return {
     id: source.id,
@@ -326,10 +341,41 @@ function parseGlyphFromSvg(svgMarkup: string, source: GlyphSource): GlyphDef {
     viewBox: viewBox || `0 0 ${width} ${height}`,
     viewBoxMinX: minX,
     viewBoxMinY: minY,
+    contentMinX: contentBox?.minX ?? minX,
+    contentMinY: contentBox?.minY ?? minY,
+    contentWidth: contentBox?.width ?? width,
+    contentHeight: contentBox?.height ?? height,
     width,
     height,
     body: svg.innerHTML,
     source: 'builtin',
+  }
+}
+
+function measureSvgContent(svg: SVGSVGElement): { minX: number; minY: number; width: number; height: number } | null {
+  if (typeof document === 'undefined') return null
+
+  const tempSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+  const group = document.createElementNS('http://www.w3.org/2000/svg', 'g')
+  group.innerHTML = svg.innerHTML
+  tempSvg.setAttribute('viewBox', svg.getAttribute('viewBox') || '0 0 1 1')
+  tempSvg.setAttribute('width', '0')
+  tempSvg.setAttribute('height', '0')
+  tempSvg.style.position = 'absolute'
+  tempSvg.style.left = '-10000px'
+  tempSvg.style.top = '-10000px'
+  tempSvg.style.visibility = 'hidden'
+  tempSvg.style.overflow = 'visible'
+  tempSvg.appendChild(group)
+  document.body.appendChild(tempSvg)
+
+  try {
+    const box = group.getBBox()
+    return { minX: box.x, minY: box.y, width: box.width, height: box.height }
+  } catch (error) {
+    return null
+  } finally {
+    tempSvg.remove()
   }
 }
 

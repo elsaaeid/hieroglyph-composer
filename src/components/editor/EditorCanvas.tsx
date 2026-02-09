@@ -95,6 +95,23 @@ function EditorCanvas({
   const handleMargin = Math.max(cellStep * 0.08, activeBounds.height * 0.15)
   const handleSize = Math.max(cellStep * 0.06, 40)
   const handleHalf = handleSize / 2
+  const cornerArm = handleSize * 0.6
+  const rotateHandleAngle = (selectedItem?.instance.rotate ?? 0) + 45
+
+  const getCornerPath = (key: string, x: number, y: number) => {
+    switch (key) {
+      case 'nw':
+        return `M ${x} ${y + cornerArm} L ${x} ${y} L ${x + cornerArm} ${y}`
+      case 'ne':
+        return `M ${x - cornerArm} ${y} L ${x} ${y} L ${x} ${y + cornerArm}`
+      case 'se':
+        return `M ${x} ${y - cornerArm} L ${x} ${y} L ${x - cornerArm} ${y}`
+      case 'sw':
+        return `M ${x + cornerArm} ${y} L ${x} ${y} L ${x} ${y - cornerArm}`
+      default:
+        return ''
+    }
+  }
 
   useLayoutEffect(() => {
     if (!selectedItem || !selectedGroupRef.current || !svgRef.current) {
@@ -292,14 +309,16 @@ function EditorCanvas({
               strokeWidth={6}
               strokeLinecap="round"
             />
-            <circle
-              cx={glyphCenterX}
-              cy={glyphCenterY - activeBounds.height / 2 - handleMargin}
-              r={handleHalf}
+            <rect
+              x={glyphCenterX - handleHalf}
+              y={glyphCenterY - activeBounds.height / 2 - handleMargin - handleHalf}
+              width={handleSize}
+              height={handleSize}
               fill="#ffffff"
               stroke="#3b82f6"
               strokeWidth={8}
               className="cursor-grab"
+              transform={`rotate(${rotateHandleAngle} ${glyphCenterX} ${glyphCenterY - activeBounds.height / 2 - handleMargin})`}
               onPointerDown={(event) => {
                 event.stopPropagation()
                 const point = handlePoint(event)
@@ -334,18 +353,9 @@ function EditorCanvas({
               cursor: string
               mode: DragState['mode']
             }>).map((handle) => (
-              <rect
-                key={handle.key}
-                x={handle.x - handleHalf}
-                y={handle.y - handleHalf}
-                width={handleSize}
-                height={handleSize}
-                rx={handleSize * 0.2}
-                fill="#ffffff"
-                stroke="#3b82f6"
-                strokeWidth={8}
-                className={handle.cursor}
-                onPointerDown={(event) => {
+              (() => {
+                const isCorner = ['nw', 'ne', 'se', 'sw'].includes(handle.key)
+                const startDrag = (event: PointerEvent<SVGElement>) => {
                   event.stopPropagation()
                   const point = handlePoint(event)
                   if (!point) return
@@ -367,8 +377,46 @@ function EditorCanvas({
                     startScaleX: scaleX,
                     startScaleY: scaleY,
                   }
-                }}
-              />
+                }
+
+                if (!isCorner) {
+                  return (
+                    <rect
+                      key={handle.key}
+                      x={handle.x - handleHalf}
+                      y={handle.y - handleHalf}
+                      width={handleSize}
+                      height={handleSize}
+                      rx={handleSize * 0.2}
+                      fill="#ffffff"
+                      stroke="#3b82f6"
+                      strokeWidth={8}
+                      className={handle.cursor}
+                      onPointerDown={startDrag}
+                    />
+                  )
+                }
+
+                return (
+                  <g key={handle.key} className={handle.cursor} onPointerDown={startDrag}>
+                    <rect
+                      x={handle.x - handleHalf}
+                      y={handle.y - handleHalf}
+                      width={handleSize}
+                      height={handleSize}
+                      fill="transparent"
+                    />
+                    <path
+                      d={getCornerPath(handle.key, handle.x, handle.y)}
+                      stroke="#3b82f6"
+                      strokeWidth={8}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      fill="none"
+                    />
+                  </g>
+                )
+              })()
             ))}
             <rect
               x={activeBounds.x}
