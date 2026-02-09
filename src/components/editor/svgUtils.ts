@@ -94,8 +94,14 @@ export async function writeClipboard(
     Boolean(navigator.clipboard?.write) &&
     Boolean(window.isSecureContext)
 
+  const svgDataUri = svgMarkup
+    ? `data:image/svg+xml;utf8,${encodeURIComponent(svgMarkup)}`
+    : ''
+
   if (canWriteRich) {
-    const htmlPayload = `<!doctype html><html><body>${svgMarkup}</body></html>`
+    const htmlPayload = `<!doctype html><html><body>${
+      svgDataUri ? `<img src="${svgDataUri}" alt="" />` : ''
+    }${svgMarkup}</body></html>`
     const htmlBlob = new Blob([htmlPayload], { type: 'text/html' })
     const svgBlob = new Blob([svgMarkup], { type: 'image/svg+xml' })
     const textBlob = new Blob([plainText], { type: 'text/plain' })
