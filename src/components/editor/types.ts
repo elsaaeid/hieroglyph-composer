@@ -17,6 +17,8 @@ export type GlyphInstance = {
   flipX: boolean
   flipY: boolean
   scale: number
+  scaleX: number
+  scaleY: number
   offsetX: number
   offsetY: number
 }

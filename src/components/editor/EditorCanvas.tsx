@@ -19,6 +19,20 @@ type EditorCanvasProps = {
   onTranslate: (dx: number, dy: number) => void
   onSetRotate: (value: number) => void
   onSetScale: (value: number) => void
+  onSetScaleX: (value: number) => void
+  onSetScaleY: (value: number) => void
+}
+
+type DragState = {
+  mode: 'move' | 'rotate' | 'scale' | 'scaleX' | 'scaleY'
+  lastX: number
+  lastY: number
+  startAngle: number
+  startRotate: number
+  startDistance: number
+  startScale: number
+  startScaleX: number
+  startScaleY: number
 }
 
 function EditorCanvas({
@@ -36,12 +50,14 @@ function EditorCanvas({
   onTranslate,
   onSetRotate,
   onSetScale,
+  onSetScaleX,
+  onSetScaleY,
 }: EditorCanvasProps) {
   const safeZoom = Math.max(0.1, zoom)
   const viewBoxWidth = viewWidth / safeZoom
   const viewBoxHeight = viewHeight / safeZoom
   const svgRef = useRef<SVGSVGElement | null>(null)
-  const dragRef = useRef<{ mode: 'move' | 'rotate' | 'scale'; lastX: number; lastY: number; startAngle: number; startRotate: number; startDistance: number; startScale: number } | null>(null)
+  const dragRef = useRef<DragState | null>(null)
 
   const selectedItem = layout.find((item) => selectedIds.includes(item.instance.id)) ?? null
   const selectedInstance = selectedItem?.instance ?? null
@@ -50,8 +66,10 @@ function EditorCanvas({
   const offsetX = selectedInstance ? (selectedInstance.offsetX ?? 0) * offsetScale : 0
   const offsetY = selectedInstance ? (selectedInstance.offsetY ?? 0) * offsetScale : 0
   const fitScale = selectedGlyph ? QUADRAT / Math.max(selectedGlyph.width, selectedGlyph.height) : 1
-  const glyphWidth = selectedGlyph && selectedInstance ? selectedGlyph.width * fitScale * selectedInstance.scale : cellStep
-  const glyphHeight = selectedGlyph && selectedInstance ? selectedGlyph.height * fitScale * selectedInstance.scale : cellStep
+  const scaleX = selectedInstance ? selectedInstance.scaleX ?? selectedInstance.scale : 1
+  const scaleY = selectedInstance ? selectedInstance.scaleY ?? selectedInstance.scale : 1
+  const glyphWidth = selectedGlyph && selectedInstance ? selectedGlyph.width * fitScale * scaleX : cellStep
+  const glyphHeight = selectedGlyph && selectedInstance ? selectedGlyph.height * fitScale * scaleY : cellStep
   const glyphCenterX = selectedItem ? selectedItem.x + cellStep / 2 + offsetX : 0
   const glyphCenterY = selectedItem ? selectedItem.y + cellStep / 2 + offsetY : 0
   const handleMargin = Math.max(cellStep * 0.08, glyphHeight * 0.15)
@@ -96,6 +114,22 @@ function EditorCanvas({
       const ratio = distance / drag.startDistance
       const nextScale = Math.min(1.8, Math.max(0.5, drag.startScale * ratio))
       onSetScale(Number(nextScale.toFixed(2)))
+      return
+    }
+
+    if (drag.mode === 'scaleX') {
+      const distance = Math.abs(point.x - centerX)
+      const ratio = distance / drag.startDistance
+      const nextScale = Math.min(1.8, Math.max(0.5, drag.startScaleX * ratio))
+      onSetScaleX(Number(nextScale.toFixed(2)))
+      return
+    }
+
+    if (drag.mode === 'scaleY') {
+      const distance = Math.abs(point.y - centerY)
+      const ratio = distance / drag.startDistance
+      const nextScale = Math.min(1.8, Math.max(0.5, drag.startScaleY * ratio))
+      onSetScaleY(Number(nextScale.toFixed(2)))
     }
   }
 
@@ -191,7 +225,7 @@ function EditorCanvas({
             <circle
               cx={glyphCenterX}
               cy={glyphCenterY - glyphHeight / 2 - handleMargin}
-              r={handleSize / 2}
+              r={handleHalf}
               fill="#ffffff"
               stroke="#3b82f6"
               strokeWidth={8}
@@ -209,19 +243,27 @@ function EditorCanvas({
                   startRotate: selectedItem.instance.rotate,
                   startDistance: 1,
                   startScale: selectedItem.instance.scale,
+                  startScaleX: scaleX,
+                  startScaleY: scaleY,
                 }
               }}
             />
-            {[
-              { key: 'nw', x: glyphCenterX - glyphWidth / 2, y: glyphCenterY - glyphHeight / 2 },
-              { key: 'n', x: glyphCenterX, y: glyphCenterY - glyphHeight / 2 },
-              { key: 'ne', x: glyphCenterX + glyphWidth / 2, y: glyphCenterY - glyphHeight / 2 },
-              { key: 'e', x: glyphCenterX + glyphWidth / 2, y: glyphCenterY },
-              { key: 'se', x: glyphCenterX + glyphWidth / 2, y: glyphCenterY + glyphHeight / 2 },
-              { key: 's', x: glyphCenterX, y: glyphCenterY + glyphHeight / 2 },
-              { key: 'sw', x: glyphCenterX - glyphWidth / 2, y: glyphCenterY + glyphHeight / 2 },
-              { key: 'w', x: glyphCenterX - glyphWidth / 2, y: glyphCenterY },
-            ].map((handle) => (
+            {([
+              { key: 'nw', x: glyphCenterX - glyphWidth / 2, y: glyphCenterY - glyphHeight / 2, cursor: 'cursor-nwse-resize', mode: 'scale' },
+              { key: 'n', x: glyphCenterX, y: glyphCenterY - glyphHeight / 2, cursor: 'cursor-ns-resize', mode: 'scaleY' },
+              { key: 'ne', x: glyphCenterX + glyphWidth / 2, y: glyphCenterY - glyphHeight / 2, cursor: 'cursor-nesw-resize', mode: 'scale' },
+              { key: 'e', x: glyphCenterX + glyphWidth / 2, y: glyphCenterY, cursor: 'cursor-ew-resize', mode: 'scaleX' },
+              { key: 'se', x: glyphCenterX + glyphWidth / 2, y: glyphCenterY + glyphHeight / 2, cursor: 'cursor-nwse-resize', mode: 'scale' },
+              { key: 's', x: glyphCenterX, y: glyphCenterY + glyphHeight / 2, cursor: 'cursor-ns-resize', mode: 'scaleY' },
+              { key: 'sw', x: glyphCenterX - glyphWidth / 2, y: glyphCenterY + glyphHeight / 2, cursor: 'cursor-nesw-resize', mode: 'scale' },
+              { key: 'w', x: glyphCenterX - glyphWidth / 2, y: glyphCenterY, cursor: 'cursor-ew-resize', mode: 'scaleX' },
+            ] as const satisfies ReadonlyArray<{
+              key: string
+              x: number
+              y: number
+              cursor: string
+              mode: DragState['mode']
+            }>).map((handle) => (
               <rect
                 key={handle.key}
                 x={handle.x - handleHalf}
@@ -232,20 +274,28 @@ function EditorCanvas({
                 fill="#ffffff"
                 stroke="#3b82f6"
                 strokeWidth={8}
-                className="cursor-nwse-resize"
+                className={handle.cursor}
                 onPointerDown={(event) => {
                   event.stopPropagation()
                   const point = handlePoint(event)
                   if (!point) return
                   svgRef.current?.setPointerCapture(event.pointerId)
+                  const startDistance =
+                    handle.mode === 'scaleX'
+                      ? Math.abs(point.x - glyphCenterX)
+                      : handle.mode === 'scaleY'
+                        ? Math.abs(point.y - glyphCenterY)
+                        : Math.hypot(point.x - glyphCenterX, point.y - glyphCenterY)
                   dragRef.current = {
-                    mode: 'scale',
+                    mode: handle.mode,
                     lastX: point.x,
                     lastY: point.y,
                     startAngle: 0,
                     startRotate: selectedItem.instance.rotate,
-                    startDistance: Math.hypot(point.x - glyphCenterX, point.y - glyphCenterY) || 1,
+                    startDistance: startDistance || 1,
                     startScale: selectedItem.instance.scale,
+                    startScaleX: scaleX,
+                    startScaleY: scaleY,
                   }
                 }}
               />
@@ -270,6 +320,8 @@ function EditorCanvas({
                   startRotate: selectedItem.instance.rotate,
                   startDistance: 1,
                   startScale: selectedItem.instance.scale,
+                  startScaleX: scaleX,
+                  startScaleY: scaleY,
                 }
               }}
             />

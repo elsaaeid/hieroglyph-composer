@@ -13,7 +13,7 @@ import {
 import EditorHeader from './EditorHeader'
 import EditorToolbar from './EditorToolbar'
 import GlyphLibrary from './GlyphLibrary'
-import EditorCanvas from './EditorCanvas'
+import EditorCanvas from './EditorCanvas.tsx'
 import StatusBar from './StatusBar'
 import TransformPanel from './TransformPanel'
 
@@ -101,7 +101,10 @@ function EditorApp() {
 
   const maxScale = useMemo(() => {
     if (rows.length === 0) return 1
-    return Math.max(1, ...rows.flat().map((instance) => instance.scale))
+    return Math.max(
+      1,
+      ...rows.flat().map((instance) => Math.max(instance.scale, instance.scaleX, instance.scaleY))
+    )
   }, [rows])
   const cellStep = QUADRAT * maxScale * 1.1
   const layout = useMemo(() => layoutRows(rows, cellStep), [rows, cellStep])
@@ -124,6 +127,8 @@ function EditorApp() {
     flipX: false,
     flipY: false,
     scale: 1,
+    scaleX: 1,
+    scaleY: 1,
     offsetX: 0,
     offsetY: 0,
   })
@@ -187,7 +192,12 @@ function EditorApp() {
   }
 
   const handleScale = (value: number) => {
-    applyToSelected((item) => ({ ...item, scale: value }))
+    applyToSelected((item) => ({
+      ...item,
+      scale: value,
+      scaleX: value,
+      scaleY: value,
+    }))
   }
 
   const handleTranslate = (deltaX: number, deltaY: number) => {
@@ -203,7 +213,20 @@ function EditorApp() {
   }
 
   const handleSetScale = (value: number) => {
-    applyToSelected((item) => ({ ...item, scale: value }))
+    applyToSelected((item) => ({
+      ...item,
+      scale: value,
+      scaleX: value,
+      scaleY: value,
+    }))
+  }
+
+  const handleSetScaleX = (value: number) => {
+    applyToSelected((item) => ({ ...item, scaleX: value }))
+  }
+
+  const handleSetScaleY = (value: number) => {
+    applyToSelected((item) => ({ ...item, scaleY: value }))
   }
 
 
@@ -434,6 +457,8 @@ function EditorApp() {
             onTranslate={handleTranslate}
             onSetRotate={handleSetRotate}
             onSetScale={handleSetScale}
+            onSetScaleX={handleSetScaleX}
+            onSetScaleY={handleSetScaleY}
           />
           <StatusBar
             status={status}
@@ -443,7 +468,7 @@ function EditorApp() {
         <div className="app-sidebar-right">
           <TransformPanel
             selectedCount={selectedIds.length}
-            scaleValue={primarySelection ? primarySelection.scale : null}
+            scaleValue={primarySelection ? Math.max(primarySelection.scale, primarySelection.scaleX, primarySelection.scaleY) : null}
             onRotate={handleRotate}
             onFlipX={handleFlipX}
             onFlipY={handleFlipY}

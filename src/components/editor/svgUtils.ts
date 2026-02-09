@@ -23,7 +23,8 @@ export function buildTransform(item: LayoutItem, glyph: GlyphDef, cellStep: numb
   const fitScale = QUADRAT / Math.max(glyph.width, glyph.height)
   const flipX = item.instance.flipX ? -1 : 1
   const flipY = item.instance.flipY ? -1 : 1
-  const userScale = item.instance.scale
+  const userScaleX = item.instance.scaleX ?? item.instance.scale
+  const userScaleY = item.instance.scaleY ?? item.instance.scale
   const offsetScale = cellStep / QUADRAT
   const offsetX = (item.instance.offsetX ?? 0) * offsetScale
   const offsetY = (item.instance.offsetY ?? 0) * offsetScale
@@ -33,7 +34,7 @@ export function buildTransform(item: LayoutItem, glyph: GlyphDef, cellStep: numb
     `translate(${cellStep / 2} ${cellStep / 2})`,
     `translate(${offsetX} ${offsetY})`,
     `rotate(${item.instance.rotate})`,
-    `scale(${flipX * userScale} ${flipY * userScale})`,
+    `scale(${flipX * userScaleX} ${flipY * userScaleY})`,
     `scale(${fitScale} ${fitScale})`,
     `translate(${-centerX} ${-centerY})`,
   ].join(' ')
@@ -46,6 +47,7 @@ export function buildExportSvg(
   exportScale: number,
   selectedIds?: string[]
 ): string {
+  const pixelScale = 0.1
   const layout = layoutRows(rows, cellStep).filter((item) =>
     selectedIds && selectedIds.length > 0 ? selectedIds.includes(item.instance.id) : true
   )
@@ -77,8 +79,8 @@ export function buildExportSvg(
     <svg
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0 0 ${width} ${height}"
-      width="${width * exportScale}"
-      height="${height * exportScale}"
+      width="${width * exportScale * pixelScale}"
+      height="${height * exportScale * pixelScale}"
     >
       ${body}
     </svg>
@@ -206,6 +208,8 @@ export function parseSvgFromHtml(
           flipX: group.getAttribute('data-flip-x') === 'true',
           flipY: group.getAttribute('data-flip-y') === 'true',
           scale: Number(group.getAttribute('data-scale') ?? 1),
+          scaleX: Number(group.getAttribute('data-scale-x') ?? 1),
+          scaleY: Number(group.getAttribute('data-scale-y') ?? 1),
           offsetX: Number(group.getAttribute('data-offset-x') ?? 0),
           offsetY: Number(group.getAttribute('data-offset-y') ?? 0),
         }
