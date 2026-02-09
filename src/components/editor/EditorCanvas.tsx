@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import type { PointerEvent } from 'react'
 import type { GlyphDef, LayoutItem } from './types'
 import { QUADRAT } from './glyphData'
@@ -35,6 +35,15 @@ type DragState = {
   startScaleY: number
 }
 
+type SelectionBounds = {
+  x: number
+  y: number
+  width: number
+  height: number
+  centerX: number
+  centerY: number
+}
+
 function EditorCanvas({
   layout,
   glyphs,
@@ -58,6 +67,8 @@ function EditorCanvas({
   const viewBoxHeight = viewHeight / safeZoom
   const svgRef = useRef<SVGSVGElement | null>(null)
   const dragRef = useRef<DragState | null>(null)
+  const selectedGroupRef = useRef<SVGGElement | null>(null)
+  const [selectionBounds, setSelectionBounds] = useState<SelectionBounds | null>(null)
 
   const selectedItem = layout.find((item) => selectedIds.includes(item.instance.id)) ?? null
   const selectedInstance = selectedItem?.instance ?? null
@@ -70,18 +81,78 @@ function EditorCanvas({
   const scaleY = selectedInstance ? selectedInstance.scaleY ?? selectedInstance.scale : 1
   const glyphWidth = selectedGlyph && selectedInstance ? selectedGlyph.width * fitScale * scaleX : cellStep
   const glyphHeight = selectedGlyph && selectedInstance ? selectedGlyph.height * fitScale * scaleY : cellStep
-  const glyphCenterX = selectedItem ? selectedItem.x + cellStep / 2 + offsetX : 0
-  const glyphCenterY = selectedItem ? selectedItem.y + cellStep / 2 + offsetY : 0
-  const handleMargin = Math.max(cellStep * 0.08, glyphHeight * 0.15)
+  const fallbackBounds: SelectionBounds = {
+    x: selectedItem ? selectedItem.x + cellStep / 2 + offsetX - glyphWidth / 2 : 0,
+    y: selectedItem ? selectedItem.y + cellStep / 2 + offsetY - glyphHeight / 2 : 0,
+    width: glyphWidth,
+    height: glyphHeight,
+    centerX: selectedItem ? selectedItem.x + cellStep / 2 + offsetX : 0,
+    centerY: selectedItem ? selectedItem.y + cellStep / 2 + offsetY : 0,
+  }
+  const activeBounds = selectionBounds ?? fallbackBounds
+  const glyphCenterX = activeBounds.centerX
+  const glyphCenterY = activeBounds.centerY
+  const handleMargin = Math.max(cellStep * 0.08, activeBounds.height * 0.15)
   const handleSize = Math.max(cellStep * 0.06, 40)
   const handleHalf = handleSize / 2
+
+  useLayoutEffect(() => {
+    if (!selectedItem || !selectedGroupRef.current || !svgRef.current) {
+      setSelectionBounds(null)
+      return
+    }
+
+    const group = selectedGroupRef.current
+    const svg = svgRef.current
+    const bbox = group.getBBox()
+    const groupMatrix = group.getScreenCTM()
+    const svgMatrix = svg.getScreenCTM()
+    if (!groupMatrix || !svgMatrix) {
+      setSelectionBounds(null)
+      return
+    }
+
+    const toSvg = svgMatrix.inverse().multiply(groupMatrix)
+    const corners = [
+      new DOMPoint(bbox.x, bbox.y).matrixTransform(toSvg),
+      new DOMPoint(bbox.x + bbox.width, bbox.y).matrixTransform(toSvg),
+      new DOMPoint(bbox.x, bbox.y + bbox.height).matrixTransform(toSvg),
+      new DOMPoint(bbox.x + bbox.width, bbox.y + bbox.height).matrixTransform(toSvg),
+    ]
+    const xs = corners.map((point) => point.x)
+    const ys = corners.map((point) => point.y)
+    const minX = Math.min(...xs)
+    const maxX = Math.max(...xs)
+    const minY = Math.min(...ys)
+    const maxY = Math.max(...ys)
+
+    setSelectionBounds({
+      x: minX,
+      y: minY,
+      width: maxX - minX,
+      height: maxY - minY,
+      centerX: (minX + maxX) / 2,
+      centerY: (minY + maxY) / 2,
+    })
+  }, [
+    selectedItem,
+    selectedIds,
+    zoom,
+    cellStep,
+    layout,
+    offsetX,
+    offsetY,
+    scaleX,
+    scaleY,
+  ])
 
   const handlePoint = (event: PointerEvent<SVGElement>) => {
     if (!svgRef.current) return null
     const rect = svgRef.current.getBoundingClientRect()
     if (!rect.width || !rect.height) return null
-    const x = ((event.clientX - rect.left) / rect.width) * viewBoxWidth
-    const y = ((event.clientY - rect.top) / rect.height) * viewBoxHeight
+    const scale = Math.min(rect.width / viewBoxWidth, rect.height / viewBoxHeight)
+    const x = (event.clientX - rect.left) / scale
+    const y = (event.clientY - rect.top) / scale
     return { x, y }
   }
 
@@ -170,12 +241,13 @@ function EditorCanvas({
         {layout.map((item) => {
           const glyph = glyphMap.get(item.instance.glyphId)
           if (!glyph) return null
-          const isSelected = selectedIds.includes(item.instance.id)
+          const isPrimary = selectedItem?.instance.id === item.instance.id
           const transform = buildTransform(item, glyph, cellStep)
           return (
             <g
               key={item.instance.id}
               transform={transform}
+              ref={isPrimary ? selectedGroupRef : undefined}
               data-glyph-id={item.instance.glyphId}
               data-rotate={item.instance.rotate}
               data-flip-x={item.instance.flipX}
@@ -187,28 +259,26 @@ function EditorCanvas({
               }}
             >
               <use href={`#glyph-${glyph.id}`} />
-              {isSelected && (
-                <rect
-                  x={0}
-                  y={0}
-                  width={glyph.width}
-                  height={glyph.height}
-                  fill="none"
-                  stroke="#d4a04a"
-                  strokeWidth={40}
-                  strokeDasharray="120 60"
-                />
-              )}
             </g>
           )
         })}
         {selectedItem && (
           <g>
             <rect
-              x={glyphCenterX - glyphWidth / 2}
-              y={glyphCenterY - glyphHeight / 2}
-              width={glyphWidth}
-              height={glyphHeight}
+              x={activeBounds.x}
+              y={activeBounds.y}
+              width={activeBounds.width}
+              height={activeBounds.height}
+              fill="none"
+              stroke="#d4a04a"
+              strokeWidth={18}
+              strokeDasharray="120 60"
+            />
+            <rect
+              x={activeBounds.x}
+              y={activeBounds.y}
+              width={activeBounds.width}
+              height={activeBounds.height}
               fill="none"
               stroke="#3b82f6"
               strokeWidth={18}
@@ -217,14 +287,14 @@ function EditorCanvas({
               x1={glyphCenterX}
               y1={glyphCenterY}
               x2={glyphCenterX}
-              y2={glyphCenterY - glyphHeight / 2 - handleMargin}
+              y2={glyphCenterY - activeBounds.height / 2 - handleMargin}
               stroke="#1d3b2f"
               strokeWidth={6}
               strokeLinecap="round"
             />
             <circle
               cx={glyphCenterX}
-              cy={glyphCenterY - glyphHeight / 2 - handleMargin}
+              cy={glyphCenterY - activeBounds.height / 2 - handleMargin}
               r={handleHalf}
               fill="#ffffff"
               stroke="#3b82f6"
@@ -249,14 +319,14 @@ function EditorCanvas({
               }}
             />
             {([
-              { key: 'nw', x: glyphCenterX - glyphWidth / 2, y: glyphCenterY - glyphHeight / 2, cursor: 'cursor-nwse-resize', mode: 'scale' },
-              { key: 'n', x: glyphCenterX, y: glyphCenterY - glyphHeight / 2, cursor: 'cursor-ns-resize', mode: 'scaleY' },
-              { key: 'ne', x: glyphCenterX + glyphWidth / 2, y: glyphCenterY - glyphHeight / 2, cursor: 'cursor-nesw-resize', mode: 'scale' },
-              { key: 'e', x: glyphCenterX + glyphWidth / 2, y: glyphCenterY, cursor: 'cursor-ew-resize', mode: 'scaleX' },
-              { key: 'se', x: glyphCenterX + glyphWidth / 2, y: glyphCenterY + glyphHeight / 2, cursor: 'cursor-nwse-resize', mode: 'scale' },
-              { key: 's', x: glyphCenterX, y: glyphCenterY + glyphHeight / 2, cursor: 'cursor-ns-resize', mode: 'scaleY' },
-              { key: 'sw', x: glyphCenterX - glyphWidth / 2, y: glyphCenterY + glyphHeight / 2, cursor: 'cursor-nesw-resize', mode: 'scale' },
-              { key: 'w', x: glyphCenterX - glyphWidth / 2, y: glyphCenterY, cursor: 'cursor-ew-resize', mode: 'scaleX' },
+              { key: 'nw', x: activeBounds.x, y: activeBounds.y, cursor: 'cursor-nwse-resize', mode: 'scale' },
+              { key: 'n', x: glyphCenterX, y: activeBounds.y, cursor: 'cursor-ns-resize', mode: 'scaleY' },
+              { key: 'ne', x: activeBounds.x + activeBounds.width, y: activeBounds.y, cursor: 'cursor-nesw-resize', mode: 'scale' },
+              { key: 'e', x: activeBounds.x + activeBounds.width, y: glyphCenterY, cursor: 'cursor-ew-resize', mode: 'scaleX' },
+              { key: 'se', x: activeBounds.x + activeBounds.width, y: activeBounds.y + activeBounds.height, cursor: 'cursor-nwse-resize', mode: 'scale' },
+              { key: 's', x: glyphCenterX, y: activeBounds.y + activeBounds.height, cursor: 'cursor-ns-resize', mode: 'scaleY' },
+              { key: 'sw', x: activeBounds.x, y: activeBounds.y + activeBounds.height, cursor: 'cursor-nesw-resize', mode: 'scale' },
+              { key: 'w', x: activeBounds.x, y: glyphCenterY, cursor: 'cursor-ew-resize', mode: 'scaleX' },
             ] as const satisfies ReadonlyArray<{
               key: string
               x: number
@@ -301,10 +371,10 @@ function EditorCanvas({
               />
             ))}
             <rect
-              x={glyphCenterX - glyphWidth / 2}
-              y={glyphCenterY - glyphHeight / 2}
-              width={glyphWidth}
-              height={glyphHeight}
+              x={activeBounds.x}
+              y={activeBounds.y}
+              width={activeBounds.width}
+              height={activeBounds.height}
               fill="transparent"
               onPointerDown={(event) => {
                 event.stopPropagation()

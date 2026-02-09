@@ -18,8 +18,8 @@ export function layoutRows(rows: GlyphInstance[][], cellStep: number): LayoutIte
 }
 
 export function buildTransform(item: LayoutItem, glyph: GlyphDef, cellStep: number): string {
-  const centerX = glyph.width / 2
-  const centerY = glyph.height / 2
+  const centerX = glyph.viewBoxMinX + glyph.width / 2
+  const centerY = glyph.viewBoxMinY + glyph.height / 2
   const fitScale = QUADRAT / Math.max(glyph.width, glyph.height)
   const flipX = item.instance.flipX ? -1 : 1
   const flipY = item.instance.flipY ? -1 : 1
@@ -47,7 +47,7 @@ export function buildExportSvg(
   exportScale: number,
   selectedIds?: string[]
 ): string {
-  const pixelScale = 0.1
+  const pixelScale = 0.05
   const layout = layoutRows(rows, cellStep).filter((item) =>
     selectedIds && selectedIds.length > 0 ? selectedIds.includes(item.instance.id) : true
   )
@@ -220,6 +220,8 @@ export function parseSvgFromHtml(
 
   const viewBox = svg.getAttribute('viewBox')
   const viewBoxParts = viewBox ? viewBox.split(/\s+/).map(Number) : []
+  const minX = viewBoxParts.length === 4 ? viewBoxParts[0] : 0
+  const minY = viewBoxParts.length === 4 ? viewBoxParts[1] : 0
   const width = viewBoxParts.length === 4 ? viewBoxParts[2] : Number(svg.getAttribute('width') ?? QUADRAT)
   const height = viewBoxParts.length === 4 ? viewBoxParts[3] : Number(svg.getAttribute('height') ?? QUADRAT)
   const importId = `IMPORTED_${Date.now()}`
@@ -228,6 +230,8 @@ export function parseSvgFromHtml(
     id: importId,
     name: 'Imported SVG',
     viewBox: viewBox || `0 0 ${width} ${height}`,
+    viewBoxMinX: minX,
+    viewBoxMinY: minY,
     width: width || QUADRAT,
     height: height || QUADRAT,
     body: svg.innerHTML,
@@ -249,6 +253,8 @@ export function parseSvgMarkup(svgMarkup: string, id: string): GlyphDef | null {
   const viewBoxParts = viewBox ? viewBox.split(/\s+/).map(Number) : []
   const rawWidth = svg.getAttribute('width')
   const rawHeight = svg.getAttribute('height')
+  const minX = viewBoxParts.length === 4 ? viewBoxParts[0] : 0
+  const minY = viewBoxParts.length === 4 ? viewBoxParts[1] : 0
   const width = viewBoxParts.length === 4 ? viewBoxParts[2] : parseNumber(rawWidth) || QUADRAT
   const height = viewBoxParts.length === 4 ? viewBoxParts[3] : parseNumber(rawHeight) || QUADRAT
 
@@ -256,6 +262,8 @@ export function parseSvgMarkup(svgMarkup: string, id: string): GlyphDef | null {
     id,
     name: 'Imported SVG',
     viewBox: viewBox || `0 0 ${width} ${height}`,
+    viewBoxMinX: minX,
+    viewBoxMinY: minY,
     width: width || QUADRAT,
     height: height || QUADRAT,
     body: svg.innerHTML,
@@ -307,6 +315,8 @@ function parseGlyphFromSvg(svgMarkup: string, source: GlyphSource): GlyphDef {
   const viewBoxParts = viewBox ? viewBox.split(/\s+/).map(Number) : []
   const rawWidth = svg.getAttribute('width')
   const rawHeight = svg.getAttribute('height')
+  const minX = viewBoxParts.length === 4 ? viewBoxParts[0] : 0
+  const minY = viewBoxParts.length === 4 ? viewBoxParts[1] : 0
   const width = viewBoxParts.length === 4 ? viewBoxParts[2] : parseNumber(rawWidth) || QUADRAT
   const height = viewBoxParts.length === 4 ? viewBoxParts[3] : parseNumber(rawHeight) || QUADRAT
 
@@ -314,6 +324,8 @@ function parseGlyphFromSvg(svgMarkup: string, source: GlyphSource): GlyphDef {
     id: source.id,
     name: source.name ?? source.id,
     viewBox: viewBox || `0 0 ${width} ${height}`,
+    viewBoxMinX: minX,
+    viewBoxMinY: minY,
     width,
     height,
     body: svg.innerHTML,

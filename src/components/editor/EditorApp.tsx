@@ -23,7 +23,7 @@ function EditorApp() {
   const [rows, setRows] = useState<GlyphInstance[][]>([[]])
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [search, setSearch] = useState('')
-  const [zoom, setZoom] = useState(0.75)
+  const [zoom, setZoom] = useState(0.3)
   const [status, setStatus] = useState('Ready')
   const [isLoadingGlyphs, setIsLoadingGlyphs] = useState(false)
   const [page, setPage] = useState(1)
@@ -306,7 +306,7 @@ function EditorApp() {
 
   const handleCopyExternal = async () => {
     try {
-      const mode = await writeClipboard(SAMPLE_EXTERNAL_SVG, 'external-svg')
+      const mode = await writeClipboard(SAMPLE_EXTERNAL_SVG, '')
       if (mode === 'html') {
         const message = 'Copied inline SVG sample to clipboard'
         setStatus(message)

@@ -4,6 +4,8 @@ export type GlyphDef = {
   id: string
   name: string
   viewBox: string
+  viewBoxMinX: number
+  viewBoxMinY: number
   width: number
   height: number
   body: string
