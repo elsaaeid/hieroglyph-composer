@@ -56,6 +56,7 @@ function EditorCanvas({
   const glyphCenterY = selectedItem ? selectedItem.y + cellStep / 2 + offsetY : 0
   const handleMargin = Math.max(cellStep * 0.08, glyphHeight * 0.15)
   const handleSize = Math.max(cellStep * 0.06, 40)
+  const handleHalf = handleSize / 2
 
   const handlePoint = (event: PointerEvent<SVGElement>) => {
     if (!svgRef.current) return null
@@ -169,6 +170,15 @@ function EditorCanvas({
         })}
         {selectedItem && (
           <g>
+            <rect
+              x={glyphCenterX - glyphWidth / 2}
+              y={glyphCenterY - glyphHeight / 2}
+              width={glyphWidth}
+              height={glyphHeight}
+              fill="none"
+              stroke="#3b82f6"
+              strokeWidth={18}
+            />
             <line
               x1={glyphCenterX}
               y1={glyphCenterY}
@@ -182,9 +192,9 @@ function EditorCanvas({
               cx={glyphCenterX}
               cy={glyphCenterY - glyphHeight / 2 - handleMargin}
               r={handleSize / 2}
-              fill="#d4a04a"
-              stroke="#1d3b2f"
-              strokeWidth={6}
+              fill="#ffffff"
+              stroke="#3b82f6"
+              strokeWidth={8}
               className="cursor-grab"
               onPointerDown={(event) => {
                 event.stopPropagation()
@@ -202,32 +212,44 @@ function EditorCanvas({
                 }
               }}
             />
-            <rect
-              x={glyphCenterX + glyphWidth / 2 + handleMargin * 0.4}
-              y={glyphCenterY + glyphHeight / 2 + handleMargin * 0.4}
-              width={handleSize}
-              height={handleSize}
-              rx={handleSize * 0.25}
-              fill="#d4a04a"
-              stroke="#1d3b2f"
-              strokeWidth={6}
-              className="cursor-nwse-resize"
-              onPointerDown={(event) => {
-                event.stopPropagation()
-                const point = handlePoint(event)
-                if (!point) return
-                svgRef.current?.setPointerCapture(event.pointerId)
-                dragRef.current = {
-                  mode: 'scale',
-                  lastX: point.x,
-                  lastY: point.y,
-                  startAngle: 0,
-                  startRotate: selectedItem.instance.rotate,
-                  startDistance: Math.hypot(point.x - glyphCenterX, point.y - glyphCenterY) || 1,
-                  startScale: selectedItem.instance.scale,
-                }
-              }}
-            />
+            {[
+              { key: 'nw', x: glyphCenterX - glyphWidth / 2, y: glyphCenterY - glyphHeight / 2 },
+              { key: 'n', x: glyphCenterX, y: glyphCenterY - glyphHeight / 2 },
+              { key: 'ne', x: glyphCenterX + glyphWidth / 2, y: glyphCenterY - glyphHeight / 2 },
+              { key: 'e', x: glyphCenterX + glyphWidth / 2, y: glyphCenterY },
+              { key: 'se', x: glyphCenterX + glyphWidth / 2, y: glyphCenterY + glyphHeight / 2 },
+              { key: 's', x: glyphCenterX, y: glyphCenterY + glyphHeight / 2 },
+              { key: 'sw', x: glyphCenterX - glyphWidth / 2, y: glyphCenterY + glyphHeight / 2 },
+              { key: 'w', x: glyphCenterX - glyphWidth / 2, y: glyphCenterY },
+            ].map((handle) => (
+              <rect
+                key={handle.key}
+                x={handle.x - handleHalf}
+                y={handle.y - handleHalf}
+                width={handleSize}
+                height={handleSize}
+                rx={handleSize * 0.2}
+                fill="#ffffff"
+                stroke="#3b82f6"
+                strokeWidth={8}
+                className="cursor-nwse-resize"
+                onPointerDown={(event) => {
+                  event.stopPropagation()
+                  const point = handlePoint(event)
+                  if (!point) return
+                  svgRef.current?.setPointerCapture(event.pointerId)
+                  dragRef.current = {
+                    mode: 'scale',
+                    lastX: point.x,
+                    lastY: point.y,
+                    startAngle: 0,
+                    startRotate: selectedItem.instance.rotate,
+                    startDistance: Math.hypot(point.x - glyphCenterX, point.y - glyphCenterY) || 1,
+                    startScale: selectedItem.instance.scale,
+                  }
+                }}
+              />
+            ))}
             <rect
               x={glyphCenterX - glyphWidth / 2}
               y={glyphCenterY - glyphHeight / 2}

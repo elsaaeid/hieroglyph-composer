@@ -95,13 +95,13 @@ export async function writeClipboard(
     Boolean(window.isSecureContext)
 
   const svgDataUri = svgMarkup
-    ? `data:image/svg+xml;utf8,${encodeURIComponent(svgMarkup)}`
+    ? `data:image/svg+xml;base64,${toBase64(svgMarkup)}`
     : ''
 
   if (canWriteRich) {
     const htmlPayload = `<!doctype html><html><body>${
       svgDataUri ? `<img src="${svgDataUri}" alt="" />` : ''
-    }${svgMarkup}</body></html>`
+    }</body></html>`
     const htmlBlob = new Blob([htmlPayload], { type: 'text/html' })
     const svgBlob = new Blob([svgMarkup], { type: 'image/svg+xml' })
     const textBlob = new Blob([plainText], { type: 'text/plain' })
@@ -121,6 +121,10 @@ export async function writeClipboard(
   const fallbackText = svgMarkup || plainText
   await navigator.clipboard.writeText(fallbackText)
   return 'text'
+}
+
+function toBase64(value: string): string {
+  return btoa(unescape(encodeURIComponent(value)))
 }
 
 export async function readClipboard(): Promise<{ html?: string; text?: string }> {
