@@ -18,10 +18,8 @@ export function layoutRows(rows: GlyphInstance[][], cellStep: number): LayoutIte
 }
 
 export function buildTransform(item: LayoutItem, glyph: GlyphDef, cellStep: number): string {
-  const viewCenterX = glyph.viewBoxMinX + glyph.width / 2
-  const viewCenterY = glyph.viewBoxMinY + glyph.height / 2
-  const rotateCenterX = glyph.contentMinX + glyph.contentWidth / 2
-  const rotateCenterY = glyph.contentMinY + glyph.contentHeight / 2
+  const centerX = glyph.viewBoxMinX + glyph.width / 2
+  const centerY = glyph.viewBoxMinY + glyph.height / 2
   const fitScale = QUADRAT / Math.max(glyph.width, glyph.height)
   const flipX = item.instance.flipX ? -1 : 1
   const flipY = item.instance.flipY ? -1 : 1
@@ -30,17 +28,15 @@ export function buildTransform(item: LayoutItem, glyph: GlyphDef, cellStep: numb
   const offsetScale = cellStep / QUADRAT
   const offsetX = (item.instance.offsetX ?? 0) * offsetScale
   const offsetY = (item.instance.offsetY ?? 0) * offsetScale
+  const pivotX = item.x + cellStep / 2 + offsetX
+  const pivotY = item.y + cellStep / 2 + offsetY
 
   return [
-    `translate(${item.x} ${item.y})`,
-    `translate(${cellStep / 2} ${cellStep / 2})`,
-    `translate(${offsetX} ${offsetY})`,
-    `translate(${rotateCenterX} ${rotateCenterY})`,
+    `translate(${pivotX} ${pivotY})`,
     `rotate(${item.instance.rotate})`,
-    `translate(${-rotateCenterX} ${-rotateCenterY})`,
     `scale(${flipX * userScaleX} ${flipY * userScaleY})`,
     `scale(${fitScale} ${fitScale})`,
-    `translate(${-viewCenterX} ${-viewCenterY})`,
+    `translate(${-centerX} ${-centerY})`,
   ].join(' ')
 }
 
@@ -228,13 +224,15 @@ export function parseSvgFromHtml(
   const minY = viewBoxParts.length === 4 ? viewBoxParts[1] : 0
   const width = viewBoxParts.length === 4 ? viewBoxParts[2] : Number(svg.getAttribute('width') ?? QUADRAT)
   const height = viewBoxParts.length === 4 ? viewBoxParts[3] : Number(svg.getAttribute('height') ?? QUADRAT)
+  const safeViewBox = normalizeViewBox(viewBox, minX, minY, width, height)
+  svg.setAttribute('viewBox', safeViewBox)
   const contentBox = measureSvgContent(svg)
   const importId = `IMPORTED_${Date.now()}`
 
   const importedGlyph: GlyphDef = {
     id: importId,
     name: 'Imported SVG',
-    viewBox: viewBox || `0 0 ${width} ${height}`,
+    viewBox: safeViewBox,
     viewBoxMinX: minX,
     viewBoxMinY: minY,
     contentMinX: contentBox?.minX ?? minX,
@@ -266,12 +264,14 @@ export function parseSvgMarkup(svgMarkup: string, id: string): GlyphDef | null {
   const minY = viewBoxParts.length === 4 ? viewBoxParts[1] : 0
   const width = viewBoxParts.length === 4 ? viewBoxParts[2] : parseNumber(rawWidth) || QUADRAT
   const height = viewBoxParts.length === 4 ? viewBoxParts[3] : parseNumber(rawHeight) || QUADRAT
+  const safeViewBox = normalizeViewBox(viewBox, minX, minY, width, height)
+  svg.setAttribute('viewBox', safeViewBox)
   const contentBox = measureSvgContent(svg)
 
   return {
     id,
     name: 'Imported SVG',
-    viewBox: viewBox || `0 0 ${width} ${height}`,
+    viewBox: safeViewBox,
     viewBoxMinX: minX,
     viewBoxMinY: minY,
     contentMinX: contentBox?.minX ?? minX,
@@ -333,12 +333,14 @@ function parseGlyphFromSvg(svgMarkup: string, source: GlyphSource): GlyphDef {
   const minY = viewBoxParts.length === 4 ? viewBoxParts[1] : 0
   const width = viewBoxParts.length === 4 ? viewBoxParts[2] : parseNumber(rawWidth) || QUADRAT
   const height = viewBoxParts.length === 4 ? viewBoxParts[3] : parseNumber(rawHeight) || QUADRAT
+  const safeViewBox = normalizeViewBox(viewBox, minX, minY, width, height)
+  svg.setAttribute('viewBox', safeViewBox)
   const contentBox = measureSvgContent(svg)
 
   return {
     id: source.id,
     name: source.name ?? source.id,
-    viewBox: viewBox || `0 0 ${width} ${height}`,
+    viewBox: safeViewBox,
     viewBoxMinX: minX,
     viewBoxMinY: minY,
     contentMinX: contentBox?.minX ?? minX,
@@ -358,7 +360,13 @@ function measureSvgContent(svg: SVGSVGElement): { minX: number; minY: number; wi
   const tempSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
   const group = document.createElementNS('http://www.w3.org/2000/svg', 'g')
   group.innerHTML = svg.innerHTML
-  tempSvg.setAttribute('viewBox', svg.getAttribute('viewBox') || '0 0 1 1')
+  const rawViewBox = svg.getAttribute('viewBox')
+  const rawParts = rawViewBox ? rawViewBox.split(/\s+/).map(Number) : []
+  const minX = rawParts.length === 4 ? rawParts[0] : 0
+  const minY = rawParts.length === 4 ? rawParts[1] : 0
+  const width = rawParts.length === 4 ? rawParts[2] : parseNumber(svg.getAttribute('width')) || QUADRAT
+  const height = rawParts.length === 4 ? rawParts[3] : parseNumber(svg.getAttribute('height')) || QUADRAT
+  tempSvg.setAttribute('viewBox', normalizeViewBox(rawViewBox, minX, minY, width, height))
   tempSvg.setAttribute('width', '0')
   tempSvg.setAttribute('height', '0')
   tempSvg.style.position = 'absolute'
@@ -396,4 +404,22 @@ function parseNumber(value: string | null): number | null {
   if (!value) return null
   const parsed = Number.parseFloat(value)
   return Number.isFinite(parsed) ? parsed : null
+}
+
+function normalizeViewBox(
+  viewBox: string | null,
+  minX: number,
+  minY: number,
+  width: number,
+  height: number
+): string {
+  const parts = viewBox ? viewBox.split(/\s+/).map(Number) : []
+  if (parts.length === 4 && parts.every((value) => Number.isFinite(value))) {
+    return viewBox as string
+  }
+  const safeWidth = Number.isFinite(width) && width > 0 ? width : QUADRAT
+  const safeHeight = Number.isFinite(height) && height > 0 ? height : QUADRAT
+  const safeMinX = Number.isFinite(minX) ? minX : 0
+  const safeMinY = Number.isFinite(minY) ? minY : 0
+  return `${safeMinX} ${safeMinY} ${safeWidth} ${safeHeight}`
 }

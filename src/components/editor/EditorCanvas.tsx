@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import type { PointerEvent } from 'react'
 import type { GlyphDef, LayoutItem } from './types'
 import { QUADRAT } from './glyphData'
@@ -25,6 +25,7 @@ type EditorCanvasProps = {
 
 type DragState = {
   mode: 'move' | 'rotate' | 'scale' | 'scaleX' | 'scaleY'
+  targetId: string
   lastX: number
   lastY: number
   startAngle: number
@@ -33,15 +34,6 @@ type DragState = {
   startScale: number
   startScaleX: number
   startScaleY: number
-}
-
-type SelectionBounds = {
-  x: number
-  y: number
-  width: number
-  height: number
-  centerX: number
-  centerY: number
 }
 
 function EditorCanvas({
@@ -67,8 +59,6 @@ function EditorCanvas({
   const viewBoxHeight = viewHeight / safeZoom
   const svgRef = useRef<SVGSVGElement | null>(null)
   const dragRef = useRef<DragState | null>(null)
-  const selectedGroupRef = useRef<SVGGElement | null>(null)
-  const [selectionBounds, setSelectionBounds] = useState<SelectionBounds | null>(null)
 
   const selectedItem = layout.find((item) => selectedIds.includes(item.instance.id)) ?? null
   const selectedInstance = selectedItem?.instance ?? null
@@ -81,7 +71,7 @@ function EditorCanvas({
   const scaleY = selectedInstance ? selectedInstance.scaleY ?? selectedInstance.scale : 1
   const glyphWidth = selectedGlyph && selectedInstance ? selectedGlyph.width * fitScale * scaleX : cellStep
   const glyphHeight = selectedGlyph && selectedInstance ? selectedGlyph.height * fitScale * scaleY : cellStep
-  const fallbackBounds: SelectionBounds = {
+  const activeBounds = {
     x: selectedItem ? selectedItem.x + cellStep / 2 + offsetX - glyphWidth / 2 : 0,
     y: selectedItem ? selectedItem.y + cellStep / 2 + offsetY - glyphHeight / 2 : 0,
     width: glyphWidth,
@@ -89,14 +79,13 @@ function EditorCanvas({
     centerX: selectedItem ? selectedItem.x + cellStep / 2 + offsetX : 0,
     centerY: selectedItem ? selectedItem.y + cellStep / 2 + offsetY : 0,
   }
-  const activeBounds = selectionBounds ?? fallbackBounds
   const glyphCenterX = activeBounds.centerX
   const glyphCenterY = activeBounds.centerY
   const handleMargin = Math.max(cellStep * 0.08, activeBounds.height * 0.15)
   const handleSize = Math.max(cellStep * 0.06, 40)
   const handleHalf = handleSize / 2
   const cornerArm = handleSize * 0.6
-  const rotateHandleAngle = (selectedItem?.instance.rotate ?? 0) + 45
+  const rotateHandleAngle = 45
 
   const getCornerPath = (key: string, x: number, y: number) => {
     switch (key) {
@@ -113,56 +102,6 @@ function EditorCanvas({
     }
   }
 
-  useLayoutEffect(() => {
-    if (!selectedItem || !selectedGroupRef.current || !svgRef.current) {
-      setSelectionBounds(null)
-      return
-    }
-
-    const group = selectedGroupRef.current
-    const svg = svgRef.current
-    const bbox = group.getBBox()
-    const groupMatrix = group.getScreenCTM()
-    const svgMatrix = svg.getScreenCTM()
-    if (!groupMatrix || !svgMatrix) {
-      setSelectionBounds(null)
-      return
-    }
-
-    const toSvg = svgMatrix.inverse().multiply(groupMatrix)
-    const corners = [
-      new DOMPoint(bbox.x, bbox.y).matrixTransform(toSvg),
-      new DOMPoint(bbox.x + bbox.width, bbox.y).matrixTransform(toSvg),
-      new DOMPoint(bbox.x, bbox.y + bbox.height).matrixTransform(toSvg),
-      new DOMPoint(bbox.x + bbox.width, bbox.y + bbox.height).matrixTransform(toSvg),
-    ]
-    const xs = corners.map((point) => point.x)
-    const ys = corners.map((point) => point.y)
-    const minX = Math.min(...xs)
-    const maxX = Math.max(...xs)
-    const minY = Math.min(...ys)
-    const maxY = Math.max(...ys)
-
-    setSelectionBounds({
-      x: minX,
-      y: minY,
-      width: maxX - minX,
-      height: maxY - minY,
-      centerX: (minX + maxX) / 2,
-      centerY: (minY + maxY) / 2,
-    })
-  }, [
-    selectedItem,
-    selectedIds,
-    zoom,
-    cellStep,
-    layout,
-    offsetX,
-    offsetY,
-    scaleX,
-    scaleY,
-  ])
-
   const handlePoint = (event: PointerEvent<SVGElement>) => {
     if (!svgRef.current) return null
     const rect = svgRef.current.getBoundingClientRect()
@@ -174,12 +113,16 @@ function EditorCanvas({
   }
 
   const handlePointerMove = (event: PointerEvent<SVGElement>) => {
-    if (!dragRef.current || !selectedItem) return
+    if (!dragRef.current) return
+    const targetItem = layout.find((item) => item.instance.id === dragRef.current?.targetId)
+    if (!targetItem) return
     const point = handlePoint(event)
     if (!point) return
     const drag = dragRef.current
-    const centerX = selectedItem.x + cellStep / 2 + offsetX
-    const centerY = selectedItem.y + cellStep / 2 + offsetY
+    const targetOffsetX = (targetItem.instance.offsetX ?? 0) * offsetScale
+    const targetOffsetY = (targetItem.instance.offsetY ?? 0) * offsetScale
+    const centerX = targetItem.x + cellStep / 2 + targetOffsetX
+    const centerY = targetItem.y + cellStep / 2 + targetOffsetY
 
     if (drag.mode === 'move') {
       const deltaX = point.x - drag.lastX
@@ -249,6 +192,9 @@ function EditorCanvas({
         onPointerLeave={endDrag}
       >
         <defs>
+          <filter id="selected-glow" x="-30%" y="-30%" width="160%" height="160%">
+            <feDropShadow dx="0" dy="0" stdDeviation="10" floodColor="#3b82f6" floodOpacity="0.5" />
+          </filter>
           {glyphs.map((glyph) => (
             <symbol key={glyph.id} id={`glyph-${glyph.id}`} viewBox={glyph.viewBox}>
               <g dangerouslySetInnerHTML={{ __html: glyph.body }} />
@@ -258,13 +204,14 @@ function EditorCanvas({
         {layout.map((item) => {
           const glyph = glyphMap.get(item.instance.glyphId)
           if (!glyph) return null
+          const isSelected = selectedIds.includes(item.instance.id)
           const isPrimary = selectedItem?.instance.id === item.instance.id
           const transform = buildTransform(item, glyph, cellStep)
           return (
             <g
               key={item.instance.id}
               transform={transform}
-              ref={isPrimary ? selectedGroupRef : undefined}
+              filter={isSelected ? 'url(#selected-glow)' : undefined}
               data-glyph-id={item.instance.glyphId}
               data-rotate={item.instance.rotate}
               data-flip-x={item.instance.flipX}
@@ -273,6 +220,21 @@ function EditorCanvas({
               onPointerDown={(event) => {
                 event.stopPropagation()
                 onSelect(item.instance.id, event.shiftKey || event.ctrlKey)
+                const point = handlePoint(event)
+                if (!point) return
+                svgRef.current?.setPointerCapture(event.pointerId)
+                dragRef.current = {
+                  mode: 'move',
+                  targetId: item.instance.id,
+                  lastX: point.x,
+                  lastY: point.y,
+                  startAngle: 0,
+                  startRotate: item.instance.rotate,
+                  startDistance: 1,
+                  startScale: item.instance.scale,
+                  startScaleX: item.instance.scaleX ?? item.instance.scale,
+                  startScaleY: item.instance.scaleY ?? item.instance.scale,
+                }
               }}
             >
               <use href={`#glyph-${glyph.id}`} />
@@ -318,14 +280,14 @@ function EditorCanvas({
               stroke="#3b82f6"
               strokeWidth={8}
               className="cursor-grab"
-              transform={`rotate(${rotateHandleAngle} ${glyphCenterX} ${glyphCenterY - activeBounds.height / 2 - handleMargin})`}
               onPointerDown={(event) => {
                 event.stopPropagation()
                 const point = handlePoint(event)
-                if (!point) return
+                if (!point || !selectedItem) return
                 svgRef.current?.setPointerCapture(event.pointerId)
                 dragRef.current = {
                   mode: 'rotate',
+                  targetId: selectedItem.instance.id,
                   lastX: point.x,
                   lastY: point.y,
                   startAngle: Math.atan2(point.y - glyphCenterY, point.x - glyphCenterX),
@@ -358,7 +320,7 @@ function EditorCanvas({
                 const startDrag = (event: PointerEvent<SVGElement>) => {
                   event.stopPropagation()
                   const point = handlePoint(event)
-                  if (!point) return
+                  if (!point || !selectedItem) return
                   svgRef.current?.setPointerCapture(event.pointerId)
                   const startDistance =
                     handle.mode === 'scaleX'
@@ -368,6 +330,7 @@ function EditorCanvas({
                         : Math.hypot(point.x - glyphCenterX, point.y - glyphCenterY)
                   dragRef.current = {
                     mode: handle.mode,
+                    targetId: selectedItem.instance.id,
                     lastX: point.x,
                     lastY: point.y,
                     startAngle: 0,
@@ -426,12 +389,14 @@ function EditorCanvas({
               fill="transparent"
               onPointerDown={(event) => {
                 event.stopPropagation()
+                if (!selectedItem) return
                 onSelect(selectedItem.instance.id, event.shiftKey || event.ctrlKey)
                 const point = handlePoint(event)
                 if (!point) return
                 svgRef.current?.setPointerCapture(event.pointerId)
                 dragRef.current = {
                   mode: 'move',
+                  targetId: selectedItem.instance.id,
                   lastX: point.x,
                   lastY: point.y,
                   startAngle: 0,

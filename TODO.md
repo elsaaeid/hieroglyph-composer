@@ -1,0 +1,1 @@
+- [x] Add hover rotation and flip effects to glyphs in GlyphLibrary.tsx

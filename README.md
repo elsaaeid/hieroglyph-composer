@@ -48,7 +48,7 @@ This keeps all manipulation inside SVG transforms rather than CSS pixel scaling.
 
 Each glyph instance stores:
 
-- `rotate` (degrees)
+- `rotate` (degrees, per glyph/graph)
 - `flipX`, `flipY` (booleans)
 - `scale` (uniform)
 
