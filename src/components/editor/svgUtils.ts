@@ -95,24 +95,33 @@ export function buildTransform(item: LayoutItem, glyph: GlyphDef, cellStep: numb
   const offsetX = (item.instance.offsetX ?? 0) * offsetScale
   const offsetY = (item.instance.offsetY ?? 0) * offsetScale
 
-  // Cell center - this is the rotation pivot point
+  // Try to use transform border center if available
+  let borderCenterX: number | null = null
+  let borderCenterY: number | null = null
+  if (item.instance.selectionCenter && typeof item.instance.selectionCenter.centerX === 'number' && typeof item.instance.selectionCenter.centerY === 'number') {
+    borderCenterX = item.instance.selectionCenter.centerX
+    borderCenterY = item.instance.selectionCenter.centerY
+  }
+  // Fallback to cell center
   const cellCenterX = item.x + cellStep / 2
   const cellCenterY = item.y + cellStep / 2
+  const pivotX = borderCenterX ?? cellCenterX
+  const pivotY = borderCenterY ?? cellCenterY
 
   // Transform sequence (applied right-to-left mathematically):
   // 1. Translate SVG content center to origin
   // 2. Scale to fit cell size
   // 3. Apply user scale and flip
-  // 4. Rotate around the center (pure rotation, no drift!)
-  // 5. Translate to cell center position
+  // 4. Translate to pivot position (transform border center or cell center)
+  // 5. Rotate around the pivot
   // 6. Apply offset as final canvas translation (unaffected by rotation)
   return [
-    `translate(${cellCenterX} ${cellCenterY})`,
+    `translate(${pivotX} ${pivotY})`,
     `rotate(${item.instance.rotate})`,
     `scale(${flipX * userScaleX} ${flipY * userScaleY})`,
     `scale(${fitScale} ${fitScale})`,
     `translate(${-svgCenterX} ${-svgCenterY})`,
-    `translate(${offsetX} ${offsetY})`,
+    `translate(${offsetX} ${offsetY})`, // Offset applied last
   ].join(' ')
 }
 

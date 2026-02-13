@@ -90,8 +90,6 @@ function EditorCanvas({
     centerY: selectedItem ? selectedItem.y + cellStep / 2 + offsetY : 0,
   }
   const activeBounds = selectionBounds ?? fallbackBounds
-  const glyphCenterX = activeBounds.centerX
-  const glyphCenterY = activeBounds.centerY
   const handleMargin = Math.max(cellStep * 0.08, activeBounds.height * 0.15)
   const handleSize = Math.max(cellStep * 0.06, 40)
   const handleHalf = handleSize / 2
@@ -248,6 +246,18 @@ function EditorCanvas({
         onPointerUp={endDrag}
         onPointerLeave={endDrag}
       >
+        {/* Blue circle at transform border center */}
+        {selectedItem && activeBounds && (
+          <circle
+            cx={activeBounds.centerX}
+            cy={activeBounds.centerY}
+            r={Math.max(8, cellStep * 0.08)}
+            fill="#2196f3"
+            stroke="#1565c0"
+            strokeWidth={2}
+            opacity={0.7}
+          />
+        )}
         <defs>
           {glyphs.map((glyph) => (
             <symbol key={glyph.id} id={`glyph-${glyph.id}`} viewBox={glyph.viewBox}>
@@ -279,7 +289,8 @@ function EditorCanvas({
             </g>
           )
         })}
-        {selectedItem && (
+        {/* Overlays for selected item */}
+        {selectedItem && activeBounds && (
           <g>
             {/* Outer glow border */}
             <rect
@@ -316,42 +327,37 @@ function EditorCanvas({
               strokeWidth={3}
               rx={4}
             />
-            {/* Center point indicator */}
+            {/* Center point indicator (fixed blue circle) */}
             <circle
-              cx={glyphCenterX}
-              cy={glyphCenterY}
-              r={6}
-              fill="none"
-              stroke="#10b981"
+              cx={activeBounds.centerX}
+              cy={activeBounds.centerY}
+              r={Math.max(8, cellStep * 0.08)}
+              fill="#2196f3"
+              stroke="#1565c0"
               strokeWidth={2}
-            />
-            <circle
-              cx={glyphCenterX}
-              cy={glyphCenterY}
-              r={2}
-              fill="#10b981"
+              opacity={0.7}
             />
             {/* Rotation guide line */}
             <line
-              x1={glyphCenterX}
-              y1={glyphCenterY}
-              x2={glyphCenterX}
-              y2={glyphCenterY - activeBounds.height / 2 - handleMargin}
+              x1={activeBounds.centerX}
+              y1={activeBounds.centerY}
+              x2={activeBounds.centerX}
+              y2={activeBounds.centerY - activeBounds.height / 2 - handleMargin}
               stroke="#1d3b2f"
               strokeWidth={6}
               strokeLinecap="round"
             />
             {/* Rotation handle */}
             <rect
-              x={glyphCenterX - handleHalf}
-              y={glyphCenterY - activeBounds.height / 2 - handleMargin - handleHalf}
+              x={activeBounds.centerX - handleHalf}
+              y={activeBounds.centerY - activeBounds.height / 2 - handleMargin - handleHalf}
               width={handleSize}
               height={handleSize}
               fill="#ffffff"
               stroke="#3b82f6"
               strokeWidth={8}
               className="cursor-grab"
-              transform={`rotate(${rotateHandleAngle} ${glyphCenterX} ${glyphCenterY - activeBounds.height / 2 - handleMargin})`}
+              transform={`rotate(${rotateHandleAngle} ${activeBounds.centerX} ${activeBounds.centerY - activeBounds.height / 2 - handleMargin})`}
               onPointerDown={(event) => {
                 event.stopPropagation()
                 const point = handlePoint(event)
@@ -361,10 +367,10 @@ function EditorCanvas({
                   mode: 'rotate',
                   lastX: point.x,
                   lastY: point.y,
-                  startAngle: Math.atan2(point.y - glyphCenterY, point.x - glyphCenterX),
-                  startRotate: selectedItem.instance.rotate,
+                  startAngle: Math.atan2(point.y - activeBounds.centerY, point.x - activeBounds.centerX),
+                  startRotate: selectedItem?.instance?.rotate ?? 0,
                   startDistance: 1,
-                  startScale: selectedItem.instance.scale,
+                  startScale: selectedItem?.instance?.scale ?? 1,
                   startScaleX: scaleX,
                   startScaleY: scaleY,
                 }
@@ -372,85 +378,75 @@ function EditorCanvas({
             />
             {([
               { key: 'nw', x: activeBounds.x, y: activeBounds.y, cursor: 'cursor-nwse-resize', mode: 'scale' },
-              { key: 'n', x: glyphCenterX, y: activeBounds.y, cursor: 'cursor-ns-resize', mode: 'scaleY' },
+              { key: 'n', x: activeBounds.centerX, y: activeBounds.y, cursor: 'cursor-ns-resize', mode: 'scaleY' },
               { key: 'ne', x: activeBounds.x + activeBounds.width, y: activeBounds.y, cursor: 'cursor-nesw-resize', mode: 'scale' },
-              { key: 'e', x: activeBounds.x + activeBounds.width, y: glyphCenterY, cursor: 'cursor-ew-resize', mode: 'scaleX' },
+              { key: 'e', x: activeBounds.x + activeBounds.width, y: activeBounds.centerY, cursor: 'cursor-ew-resize', mode: 'scaleX' },
               { key: 'se', x: activeBounds.x + activeBounds.width, y: activeBounds.y + activeBounds.height, cursor: 'cursor-nwse-resize', mode: 'scale' },
-              { key: 's', x: glyphCenterX, y: activeBounds.y + activeBounds.height, cursor: 'cursor-ns-resize', mode: 'scaleY' },
+              { key: 's', x: activeBounds.centerX, y: activeBounds.y + activeBounds.height, cursor: 'cursor-ns-resize', mode: 'scaleY' },
               { key: 'sw', x: activeBounds.x, y: activeBounds.y + activeBounds.height, cursor: 'cursor-nesw-resize', mode: 'scale' },
-              { key: 'w', x: activeBounds.x, y: glyphCenterY, cursor: 'cursor-ew-resize', mode: 'scaleX' },
-            ] as const satisfies ReadonlyArray<{
-              key: string
-              x: number
-              y: number
-              cursor: string
-              mode: DragState['mode']
-            }>).map((handle) => (
-              (() => {
-                const isCorner = ['nw', 'ne', 'se', 'sw'].includes(handle.key)
-                const startDrag = (event: PointerEvent<SVGElement>) => {
-                  event.stopPropagation()
-                  const point = handlePoint(event)
-                  if (!point) return
-                  svgRef.current?.setPointerCapture(event.pointerId)
-                  const startDistance =
-                    handle.mode === 'scaleX'
-                      ? Math.abs(point.x - glyphCenterX)
-                      : handle.mode === 'scaleY'
-                        ? Math.abs(point.y - glyphCenterY)
-                        : Math.hypot(point.x - glyphCenterX, point.y - glyphCenterY)
-                  dragRef.current = {
-                    mode: handle.mode,
-                    lastX: point.x,
-                    lastY: point.y,
-                    startAngle: 0,
-                    startRotate: selectedItem.instance.rotate,
-                    startDistance: startDistance || 1,
-                    startScale: selectedItem.instance.scale,
-                    startScaleX: scaleX,
-                    startScaleY: scaleY,
-                  }
+              { key: 'w', x: activeBounds.x, y: activeBounds.centerY, cursor: 'cursor-ew-resize', mode: 'scaleX' },
+            ] as const).map((handle) => {
+              const isCorner = ['nw', 'ne', 'se', 'sw'].includes(handle.key)
+              const startDrag = (event: PointerEvent<SVGElement>) => {
+                event.stopPropagation()
+                const point = handlePoint(event)
+                if (!point) return
+                svgRef.current?.setPointerCapture(event.pointerId)
+                const startDistance =
+                  handle.mode === 'scaleX'
+                    ? Math.abs(point.x - activeBounds.centerX)
+                    : handle.mode === 'scaleY'
+                      ? Math.abs(point.y - activeBounds.centerY)
+                      : Math.hypot(point.x - activeBounds.centerX, point.y - activeBounds.centerY)
+                dragRef.current = {
+                  mode: handle.mode,
+                  lastX: point.x,
+                  lastY: point.y,
+                  startAngle: 0,
+                  startRotate: selectedItem?.instance?.rotate ?? 0,
+                  startDistance: startDistance || 1,
+                  startScale: selectedItem?.instance?.scale ?? 1,
+                  startScaleX: scaleX,
+                  startScaleY: scaleY,
                 }
-
-                if (!isCorner) {
-                  return (
-                    <rect
-                      key={handle.key}
-                      x={handle.x - handleHalf}
-                      y={handle.y - handleHalf}
-                      width={handleSize}
-                      height={handleSize}
-                      rx={handleSize * 0.2}
-                      fill="#ffffff"
-                      stroke="#3b82f6"
-                      strokeWidth={8}
-                      className={handle.cursor}
-                      onPointerDown={startDrag}
-                    />
-                  )
-                }
-
+              }
+              if (!isCorner) {
                 return (
-                  <g key={handle.key} className={handle.cursor} onPointerDown={startDrag}>
-                    <rect
-                      x={handle.x - handleHalf}
-                      y={handle.y - handleHalf}
-                      width={handleSize}
-                      height={handleSize}
-                      fill="transparent"
-                    />
-                    <path
-                      d={getCornerPath(handle.key, handle.x, handle.y)}
-                      stroke="#3b82f6"
-                      strokeWidth={8}
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      fill="none"
-                    />
-                  </g>
+                  <rect
+                    key={handle.key}
+                    x={handle.x - handleHalf}
+                    y={handle.y - handleHalf}
+                    width={handleSize}
+                    height={handleSize}
+                    rx={handleSize * 0.2}
+                    fill="#ffffff"
+                    stroke="#3b82f6"
+                    strokeWidth={8}
+                    className={handle.cursor}
+                    onPointerDown={startDrag}
+                  />
                 )
-              })()
-            ))}
+              }
+              return (
+                <g key={handle.key} className={handle.cursor} onPointerDown={startDrag}>
+                  <rect
+                    x={handle.x - handleHalf}
+                    y={handle.y - handleHalf}
+                    width={handleSize}
+                    height={handleSize}
+                    fill="transparent"
+                  />
+                  <path
+                    d={getCornerPath(handle.key, handle.x, handle.y)}
+                    stroke="#3b82f6"
+                    strokeWidth={8}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    fill="none"
+                  />
+                </g>
+              )
+            })}
             <rect
               x={activeBounds.x}
               y={activeBounds.y}
@@ -459,7 +455,7 @@ function EditorCanvas({
               fill="transparent"
               onPointerDown={(event) => {
                 event.stopPropagation()
-                onSelect(selectedItem.instance.id, event.shiftKey || event.ctrlKey)
+                onSelect(selectedItem?.instance?.id ?? '', event.shiftKey || event.ctrlKey)
                 const point = handlePoint(event)
                 if (!point) return
                 svgRef.current?.setPointerCapture(event.pointerId)
@@ -468,9 +464,9 @@ function EditorCanvas({
                   lastX: point.x,
                   lastY: point.y,
                   startAngle: 0,
-                  startRotate: selectedItem.instance.rotate,
+                  startRotate: selectedItem?.instance?.rotate ?? 0,
                   startDistance: 1,
-                  startScale: selectedItem.instance.scale,
+                  startScale: selectedItem?.instance?.scale ?? 1,
                   startScaleX: scaleX,
                   startScaleY: scaleY,
                 }

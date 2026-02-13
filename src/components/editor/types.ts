@@ -27,6 +27,7 @@ export type GlyphInstance = {
   scaleY: number
   offsetX: number
   offsetY: number
+  selectionCenter?: import('./svgUtils').SelectionCenter
 }
 
 export type LayoutItem = {

@@ -9,6 +9,7 @@ import {
   parseSvgMarkup,
   readClipboard,
   writeClipboard,
+  calculateSelectionCenter,
 } from './svgUtils'
 import EditorHeader from './EditorHeader'
 import EditorToolbar from './EditorToolbar'
@@ -171,8 +172,22 @@ function EditorApp() {
 
   const applyToSelected = (updater: (instance: GlyphInstance) => GlyphInstance) => {
     if (selectedIds.length === 0) return
+    // Calculate selection center for selected items
+    const selectedLayoutItems = layout.filter((item) => selectedIds.includes(item.instance.id))
+    const selectionCenter = selectedLayoutItems.length > 0 ? calculateSelectionCenter(selectedLayoutItems, glyphMap, cellStep) : null
     setRows((prev) =>
-      prev.map((row) => row.map((item) => (selectedIds.includes(item.id) ? updater(item) : item)))
+      prev.map((row) =>
+        row.map((item) => {
+          if (selectedIds.includes(item.id)) {
+            // Attach selectionCenter to instance for transform
+            return {
+              ...updater(item),
+              selectionCenter: selectionCenter || undefined,
+            }
+          }
+          return item
+        })
+      )
     )
   }
 
