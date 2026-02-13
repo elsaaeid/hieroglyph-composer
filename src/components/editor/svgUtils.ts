@@ -17,26 +17,102 @@ export function layoutRows(rows: GlyphInstance[][], cellStep: number): LayoutIte
   return items
 }
 
+export type SelectionCenter = {
+  centerX: number
+  centerY: number
+  minX: number
+  minY: number
+  maxX: number
+  maxY: number
+  width: number
+  height: number
+}
+
+export function calculateSelectionCenter(
+  selectedItems: LayoutItem[],
+  glyphMap: Map<string, GlyphDef>,
+  cellStep: number
+): SelectionCenter | null {
+  if (selectedItems.length === 0) return null
+
+  const offsetScale = cellStep / QUADRAT
+  let minX = Infinity
+  let maxX = -Infinity
+  let minY = Infinity
+  let maxY = -Infinity
+
+  for (const item of selectedItems) {
+    const glyph = glyphMap.get(item.instance.glyphId)
+    if (!glyph) continue
+
+    const fitScale = QUADRAT / Math.max(glyph.width, glyph.height)
+    const offsetX = (item.instance.offsetX ?? 0) * offsetScale
+    const offsetY = (item.instance.offsetY ?? 0) * offsetScale
+    const scaleX = item.instance.scaleX ?? item.instance.scale
+    const scaleY = item.instance.scaleY ?? item.instance.scale
+
+    const glyphWidth = glyph.width * fitScale * scaleX
+    const glyphHeight = glyph.height * fitScale * scaleY
+
+    const centerX = item.x + cellStep / 2 + offsetX
+    const centerY = item.y + cellStep / 2 + offsetY
+
+    const left = centerX - glyphWidth / 2
+    const right = centerX + glyphWidth / 2
+    const top = centerY - glyphHeight / 2
+    const bottom = centerY + glyphHeight / 2
+
+    minX = Math.min(minX, left)
+    maxX = Math.max(maxX, right)
+    minY = Math.min(minY, top)
+    maxY = Math.max(maxY, bottom)
+  }
+
+  const width = maxX - minX
+  const height = maxY - minY
+  const centerX = (minX + maxX) / 2
+  const centerY = (minY + maxY) / 2
+
+  return { centerX, centerY, minX, minY, maxX, maxY, width, height }
+}
+
 export function buildTransform(item: LayoutItem, glyph: GlyphDef, cellStep: number): string {
-  const centerX = glyph.viewBoxMinX + glyph.width / 2
-  const centerY = glyph.viewBoxMinY + glyph.height / 2
+  // SVG glyph internal center point
+  const svgCenterX = glyph.viewBoxMinX + glyph.width / 2
+  const svgCenterY = glyph.viewBoxMinY + glyph.height / 2
+
+  // Scaling factor to fit glyph into the standard cell size
   const fitScale = QUADRAT / Math.max(glyph.width, glyph.height)
+
+  // User-applied transforms
   const flipX = item.instance.flipX ? -1 : 1
   const flipY = item.instance.flipY ? -1 : 1
   const userScaleX = item.instance.scaleX ?? item.instance.scale
   const userScaleY = item.instance.scaleY ?? item.instance.scale
+
+  // Convert offset from grid units to canvas units
   const offsetScale = cellStep / QUADRAT
   const offsetX = (item.instance.offsetX ?? 0) * offsetScale
   const offsetY = (item.instance.offsetY ?? 0) * offsetScale
-  const pivotX = item.x + cellStep / 2 + offsetX
-  const pivotY = item.y + cellStep / 2 + offsetY
 
+  // Cell center - this is the rotation pivot point
+  const cellCenterX = item.x + cellStep / 2
+  const cellCenterY = item.y + cellStep / 2
+
+  // Transform sequence (applied right-to-left mathematically):
+  // 1. Translate SVG content center to origin
+  // 2. Scale to fit cell size
+  // 3. Apply user scale and flip
+  // 4. Rotate around the center (pure rotation, no drift!)
+  // 5. Translate to cell center position
+  // 6. Apply offset as final canvas translation (unaffected by rotation)
   return [
-    `translate(${pivotX} ${pivotY})`,
+    `translate(${cellCenterX} ${cellCenterY})`,
     `rotate(${item.instance.rotate})`,
     `scale(${flipX * userScaleX} ${flipY * userScaleY})`,
     `scale(${fitScale} ${fitScale})`,
-    `translate(${-centerX} ${-centerY})`,
+    `translate(${-svgCenterX} ${-svgCenterY})`,
+    `translate(${offsetX} ${offsetY})`,
   ].join(' ')
 }
 

@@ -12,7 +12,7 @@ import {
 } from './svgUtils'
 import EditorHeader from './EditorHeader'
 import EditorToolbar from './EditorToolbar'
-import GlyphLibrary from './GlyphLibrary'
+import GlyphLibrary from './GlyphLibrary.tsx'
 import EditorCanvas from './EditorCanvas.tsx'
 import StatusBar from './StatusBar'
 import TransformPanel from './TransformPanel'
@@ -177,17 +177,26 @@ function EditorApp() {
   }
 
   const handleRotate = () => {
-    applyToSelected((item) => ({ ...item, rotate: (item.rotate + 90) % 360 }))
-    setStatus('Rotate 90 deg')
+    applyToSelected((item) => ({
+      ...item,
+      rotate: (item.rotate + 90) % 360,
+    }))
+    setStatus('Rotate 90°')
   }
 
   const handleFlipX = () => {
-    applyToSelected((item) => ({ ...item, flipX: !item.flipX }))
+    applyToSelected((item) => ({
+      ...item,
+      flipX: !item.flipX,
+    }))
     setStatus('Flip horizontal')
   }
 
   const handleFlipY = () => {
-    applyToSelected((item) => ({ ...item, flipY: !item.flipY }))
+    applyToSelected((item) => ({
+      ...item,
+      flipY: !item.flipY,
+    }))
     setStatus('Flip vertical')
   }
 
@@ -229,6 +238,13 @@ function EditorApp() {
     applyToSelected((item) => ({ ...item, scaleY: value }))
   }
 
+  const handleSetOffsetX = (value: number) => {
+    applyToSelected((item) => ({ ...item, offsetX: value }))
+  }
+
+  const handleSetOffsetY = (value: number) => {
+    applyToSelected((item) => ({ ...item, offsetY: value }))
+  }
 
   const handleDelete = () => {
     if (selectedIds.length === 0) return
@@ -468,7 +484,13 @@ function EditorApp() {
         <div className="app-sidebar-right">
           <TransformPanel
             selectedCount={selectedIds.length}
+            offsetX={primarySelection?.offsetX ?? null}
+            offsetY={primarySelection?.offsetY ?? null}
+            rotateValue={primarySelection?.rotate ?? null}
             scaleValue={primarySelection ? Math.max(primarySelection.scale, primarySelection.scaleX, primarySelection.scaleY) : null}
+            onOffsetXChange={handleSetOffsetX}
+            onOffsetYChange={handleSetOffsetY}
+            onRotateChange={handleSetRotate}
             onRotate={handleRotate}
             onFlipX={handleFlipX}
             onFlipY={handleFlipY}
