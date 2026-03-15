@@ -8,6 +8,10 @@ type EditorToolbarProps = {
   onRemoveRow: () => void
   onClearSelection: () => void
   onDelete: () => void
+  onUndo: () => void
+  onRedo: () => void
+  canUndo: boolean
+  canRedo: boolean
 }
 
 function EditorToolbar({
@@ -20,6 +24,10 @@ function EditorToolbar({
   onRemoveRow,
   onClearSelection,
   onDelete,
+  onUndo,
+  onRedo,
+  canUndo,
+  canRedo,
 }: EditorToolbarProps) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-4">
@@ -66,6 +74,22 @@ function EditorToolbar({
         </button>
       </div>
       <div className="flex flex-wrap gap-2">
+        <button
+          className="cursor-pointer rounded-full border border-emerald-900/30 px-4 py-2 text-sm font-semibold text-emerald-900 transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50"
+          onClick={onUndo}
+          disabled={!canUndo}
+          title="Undo (Ctrl/Cmd+Z)"
+        >
+          Undo
+        </button>
+        <button
+          className="cursor-pointer rounded-full border border-emerald-900/30 px-4 py-2 text-sm font-semibold text-emerald-900 transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50"
+          onClick={onRedo}
+          disabled={!canRedo}
+          title="Redo (Ctrl/Cmd+Shift+Z)"
+        >
+          Redo
+        </button>
         <button
           className="cursor-pointer rounded-full border border-emerald-900/30 px-4 py-2 text-sm font-semibold text-emerald-900 transition hover:-translate-y-0.5"
           onClick={onClearSelection}

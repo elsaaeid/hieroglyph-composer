@@ -78,10 +78,63 @@
 .app-sidebar-left,
 .app-sidebar-right {
   width: 100%;
+  transition: width 0.3s ease, opacity 0.3s ease;
+}
+
+.app-sidebar-left.collapsed,
+.app-sidebar-right.collapsed {
+  width: 0;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
 }
 
 .app-canvas {
   width: 100%;
+}
+
+.sidebar-collapse-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(27, 89, 59, 0.3);
+  background: transparent;
+  color: rgb(27, 89, 59);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.sidebar-collapse-button:hover {
+  background: rgba(27, 89, 59, 0.1);
+  transform: translate(-1px, 0);
+}
+
+.left-sidebar-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.left-sidebar-tab-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+}
+
+.left-sidebar-tab-icon {
+  width: 0.95rem;
+  height: 0.95rem;
+  flex-shrink: 0;
+}
+
+.left-sidebar-tab-label {
+  white-space: nowrap;
 }
 
 .side-panel {
@@ -179,7 +232,7 @@
   }
 
   .app-sidebar-left {
-    width: 16rem;
+    width: 20rem;
     flex-shrink: 0;
   }
 
@@ -191,5 +244,64 @@
   .app-canvas {
     flex: 1 1 0%;
     min-width: 0;
+  }
+
+  .app-sidebar-left.collapsed {
+    width: 3rem;
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .app-sidebar-left.collapsed > aside > .flex {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .app-sidebar-left.collapsed .left-sidebar-tabs {
+    display: flex;
+    flex-direction: column;
+    flex: 0;
+    width: 100%;
+  }
+
+  .app-sidebar-left.collapsed .left-sidebar-tab-button {
+    width: 100%;
+    padding: 0.45rem 0;
+  }
+
+  .app-sidebar-left.collapsed .left-sidebar-tab-label {
+    display: none;
+  }
+
+  .app-sidebar-right.collapsed {
+    width: 3rem;
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .app-sidebar-right.collapsed > .relative > .sidebar-collapse-button {
+    position: static;
+    width: 100%;
+    height: auto;
+    padding: 0.5rem;
+  }
+
+  .app-sidebar-right.collapsed > .relative > * {
+    display: none;
+  }
+
+  .app-sidebar-right.collapsed > .relative > .sidebar-collapse-button {
+    display: flex;
+  }
+
+    .app-sidebar-right.collapsed .side-panel {
+      display: none;
+    }
+}
+
+@media (max-width: 1023px) {
+  .app-sidebar-left.collapsed,
+  .app-sidebar-right.collapsed {
+    display: none;
   }
 }

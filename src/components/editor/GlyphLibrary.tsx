@@ -74,7 +74,12 @@ function GlyphLibrary({
           : glyphs.map((glyph) => (
               <button
                 key={glyph.id}
-                className="cursor-pointer rounded-2xl border border-emerald-900/20 bg-[#fdfbf5] p-2 text-left transition hover:-translate-y-0.5 hover:shadow-[0_12px_18px_rgba(27,26,23,0.1)]"
+                draggable
+                onDragStart={(event) => {
+                  event.dataTransfer.effectAllowed = 'copy'
+                  event.dataTransfer.setData('application/json', JSON.stringify({ type: 'glyph', glyphId: glyph.id }))
+                }}
+                className="cursor-move rounded-2xl border border-emerald-900/20 bg-[#fdfbf5] p-2 text-left transition hover:-translate-y-0.5 hover:shadow-[0_12px_18px_rgba(27,26,23,0.1)]"
                 onClick={() => onAddGlyph(glyph.id)}
               >
                 <div className="font-semibold text-emerald-950">{glyph.id}</div>

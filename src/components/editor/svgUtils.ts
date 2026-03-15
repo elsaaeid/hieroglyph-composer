@@ -1,6 +1,18 @@
 import type { GlyphDef, GlyphInstance, GlyphSource, LayoutItem } from './types'
 import { QUADRAT } from './glyphData'
 
+function ensureImageHrefCompatibility(markup: string): string {
+  return markup.replace(/<image\b([^>]*)>/gi, (full, attrs: string) => {
+    const hasHref = /\shref\s*=\s*"[^"]*"/i.test(attrs)
+    const hasXlinkHref = /\sxlink:href\s*=\s*"[^"]*"/i.test(attrs)
+    if (!hasHref || hasXlinkHref) return full
+    const hrefMatch = attrs.match(/\shref\s*=\s*"([^"]*)"/i)
+    if (!hrefMatch) return full
+    const hrefValue = hrefMatch[1]
+    return `<image${attrs} xlink:href="${hrefValue}">`
+  })
+}
+
 export function layoutRows(rows: GlyphInstance[][], cellStep: number): LayoutItem[] {
   const items: LayoutItem[] = []
   rows.forEach((rowItems, rowIndex) => {
@@ -89,6 +101,14 @@ export function buildTransform(item: LayoutItem, glyph: GlyphDef, cellStep: numb
   const flipY = item.instance.flipY ? -1 : 1
   const userScaleX = item.instance.scaleX ?? item.instance.scale
   const userScaleY = item.instance.scaleY ?? item.instance.scale
+  const skewX = item.instance.skewX ?? 0
+  const skewY = item.instance.skewY ?? 0
+  const matrixA = item.instance.matrixA ?? 1
+  const matrixB = item.instance.matrixB ?? 0
+  const matrixC = item.instance.matrixC ?? 0
+  const matrixD = item.instance.matrixD ?? 1
+  const matrixE = item.instance.matrixE ?? 0
+  const matrixF = item.instance.matrixF ?? 0
 
   // Convert offset from grid units to canvas units
   const offsetScale = cellStep / QUADRAT
@@ -114,14 +134,17 @@ export function buildTransform(item: LayoutItem, glyph: GlyphDef, cellStep: numb
   // 3. Apply user scale and flip
   // 4. Translate to pivot position (transform border center or cell center)
   // 5. Rotate around the pivot
-  // 6. Apply offset as final canvas translation (unaffected by rotation)
+  // 6. Apply offset as final canvas translation (unaffected by rotation/scale)
   return [
+    `translate(${offsetX} ${offsetY})`,
     `translate(${pivotX} ${pivotY})`,
+    `matrix(${matrixA} ${matrixB} ${matrixC} ${matrixD} ${matrixE} ${matrixF})`,
+    `skewY(${skewY})`,
+    `skewX(${skewX})`,
     `rotate(${item.instance.rotate})`,
     `scale(${flipX * userScaleX} ${flipY * userScaleY})`,
     `scale(${fitScale} ${fitScale})`,
     `translate(${-svgCenterX} ${-svgCenterY})`,
-    `translate(${offsetX} ${offsetY})`, // Offset applied last
   ].join(' ')
 }
 
@@ -132,7 +155,6 @@ export function buildExportSvg(
   exportScale: number,
   selectedIds?: string[]
 ): string {
-  const pixelScale = 0.05
   const layout = layoutRows(rows, cellStep).filter((item) =>
     selectedIds && selectedIds.length > 0 ? selectedIds.includes(item.instance.id) : true
   )
@@ -140,21 +162,93 @@ export function buildExportSvg(
     return ''
   }
 
-  const maxCol = Math.max(...layout.map((item) => item.col)) + 1
-  const maxRow = Math.max(...layout.map((item) => item.row)) + 1
-  const width = maxCol * cellStep
-  const height = maxRow * cellStep
+  const layoutByLayer = layout
+    .map((item, index) => ({
+      item,
+      index,
+      z: item.instance.zIndex ?? index,
+    }))
+    .sort((a, b) => a.z - b.z || a.index - b.index)
+    .map((entry) => entry.item)
 
-  const body = layout
+  const minX = Math.min(...layoutByLayer.map((item) => item.x))
+  const minY = Math.min(...layoutByLayer.map((item) => item.y))
+  const maxX = Math.max(...layoutByLayer.map((item) => item.x + cellStep))
+  const maxY = Math.max(...layoutByLayer.map((item) => item.y + cellStep))
+  const exportPadding = cellStep * 0.5
+  const width = Math.max(cellStep, maxX - minX + exportPadding * 2)
+  const height = Math.max(cellStep, maxY - minY + exportPadding * 2)
+
+  const filterDefs = layoutByLayer
+    .map((item) => {
+      const glyph = glyphMap.get(item.instance.glyphId)
+      if (!glyph || glyph.source !== 'imported') return ''
+      const brightness = item.instance.brightness ?? 1
+      const contrast = item.instance.contrast ?? 1
+      const exposure = item.instance.exposure ?? 0
+      const hue = item.instance.hue ?? 0
+      const saturation = item.instance.saturation ?? 1
+      const vibrance = item.instance.vibrance ?? 0
+      const blur = item.instance.blur ?? 0
+      const sharpen = item.instance.sharpen ?? 0
+      const noise = item.instance.noise ?? 0
+      const hasEffect =
+        Math.abs(brightness - 1) > 0.001 ||
+        Math.abs(contrast - 1) > 0.001 ||
+        Math.abs(exposure) > 0.001 ||
+        Math.abs(hue) > 0.001 ||
+        Math.abs(saturation - 1) > 0.001 ||
+        Math.abs(vibrance) > 0.001 ||
+        blur > 0.001 ||
+        sharpen > 0.001 ||
+        noise > 0.001
+      if (!hasEffect) return ''
+
+      const saturationMix = Math.max(0, saturation + vibrance * 0.5)
+      const exposureFactor = Math.pow(2, exposure)
+      const slope = brightness * contrast * exposureFactor
+      const intercept = 0.5 * (1 - contrast)
+      const filterId = `img-filter-${item.instance.id}`
+      return `
+        <filter id="${filterId}" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
+          <feColorMatrix in="SourceGraphic" type="hueRotate" values="${hue}" result="hue" />
+          <feColorMatrix in="hue" type="saturate" values="${saturationMix}" result="sat" />
+          <feComponentTransfer in="sat" result="tone">
+            <feFuncR type="linear" slope="${slope}" intercept="${intercept}" />
+            <feFuncG type="linear" slope="${slope}" intercept="${intercept}" />
+            <feFuncB type="linear" slope="${slope}" intercept="${intercept}" />
+          </feComponentTransfer>
+          <feGaussianBlur in="tone" stdDeviation="${blur}" result="blurred" />
+          <feConvolveMatrix in="blurred" order="3" kernelMatrix="0 -1 0 -1 5 -1 0 -1 0" divisor="1" bias="0" result="sharp" />
+          <feComposite in="sharp" in2="blurred" operator="arithmetic" k1="0" k2="${1 + sharpen}" k3="${-sharpen}" k4="0" result="enhanced" />
+          <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="1" seed="7" result="noiseRaw" />
+          <feColorMatrix in="noiseRaw" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 ${noise} 0" result="noiseAlpha" />
+          <feBlend in="enhanced" in2="noiseAlpha" mode="overlay" />
+        </filter>
+      `.trim()
+    })
+    .filter(Boolean)
+    .join('')
+
+  const body = layoutByLayer
     .map((item) => {
       const glyph = glyphMap.get(item.instance.glyphId)
       if (!glyph) return ''
-      const transform = buildTransform(item, glyph, cellStep)
+      const exportItem: LayoutItem = {
+        ...item,
+        x: item.x - minX + exportPadding,
+        y: item.y - minY + exportPadding,
+      }
+      const transform = buildTransform(exportItem, glyph, cellStep)
+      const normalizedBody = ensureImageHrefCompatibility(glyph.body)
+      const filterId = `img-filter-${item.instance.id}`
+      const hasFilter = filterDefs.includes(`id="${filterId}"`)
       return `
         <g
           transform="${transform}"
+          ${hasFilter ? `filter="url(#${filterId})"` : ''}
         >
-          ${glyph.body}
+          ${normalizedBody}
         </g>
       `.trim()
     })
@@ -163,10 +257,12 @@ export function buildExportSvg(
   return `
     <svg
       xmlns="http://www.w3.org/2000/svg"
+      xmlns:xlink="http://www.w3.org/1999/xlink"
       viewBox="0 0 ${width} ${height}"
-      width="${width * exportScale * pixelScale}"
-      height="${height * exportScale * pixelScale}"
+      width="${width * exportScale}"
+      height="${height * exportScale}"
     >
+      ${filterDefs ? `<defs>${filterDefs}</defs>` : ''}
       ${body}
     </svg>
   `.trim()
@@ -289,12 +385,30 @@ export function parseSvgFromHtml(
         return {
           id: `instance-${Date.now()}-${Math.random().toString(16).slice(2)}`,
           glyphId,
+          zIndex: Number(group.getAttribute('data-z-index') ?? 0),
           rotate: Number(group.getAttribute('data-rotate') ?? 0),
           flipX: group.getAttribute('data-flip-x') === 'true',
           flipY: group.getAttribute('data-flip-y') === 'true',
           scale: Number(group.getAttribute('data-scale') ?? 1),
           scaleX: Number(group.getAttribute('data-scale-x') ?? 1),
           scaleY: Number(group.getAttribute('data-scale-y') ?? 1),
+          skewX: Number(group.getAttribute('data-skew-x') ?? 0),
+          skewY: Number(group.getAttribute('data-skew-y') ?? 0),
+          matrixA: Number(group.getAttribute('data-matrix-a') ?? 1),
+          matrixB: Number(group.getAttribute('data-matrix-b') ?? 0),
+          matrixC: Number(group.getAttribute('data-matrix-c') ?? 0),
+          matrixD: Number(group.getAttribute('data-matrix-d') ?? 1),
+          matrixE: Number(group.getAttribute('data-matrix-e') ?? 0),
+          matrixF: Number(group.getAttribute('data-matrix-f') ?? 0),
+          brightness: Number(group.getAttribute('data-brightness') ?? 1),
+          contrast: Number(group.getAttribute('data-contrast') ?? 1),
+          exposure: Number(group.getAttribute('data-exposure') ?? 0),
+          hue: Number(group.getAttribute('data-hue') ?? 0),
+          saturation: Number(group.getAttribute('data-saturation') ?? 1),
+          vibrance: Number(group.getAttribute('data-vibrance') ?? 0),
+          blur: Number(group.getAttribute('data-blur') ?? 0),
+          sharpen: Number(group.getAttribute('data-sharpen') ?? 0),
+          noise: Number(group.getAttribute('data-noise') ?? 0),
           offsetX: Number(group.getAttribute('data-offset-x') ?? 0),
           offsetY: Number(group.getAttribute('data-offset-y') ?? 0),
         }
