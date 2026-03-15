@@ -12,10 +12,10 @@ function EditorHeader({ onCopy, onPaste, onImportImage, onExport }: EditorHeader
     <header className="fixed inset-x-2 top-0 z-40 flex flex-col gap-3 rounded-2xl bg-white/85 px-3 py-3 shadow-[0_20px_40px_rgba(27,26,23,0.08)] backdrop-blur sm:inset-x-4 sm:px-4 sm:py-4 lg:inset-x-8 lg:flex-row lg:items-center lg:justify-between lg:gap-4 lg:px-6">
       <div className="min-w-0">
         <p className="header-kicker uppercase tracking-[0.18em] text-stone-500">
-          JSesh-style SVG Editor MVP
+          action-studio
         </p>
         <h1 className="header-title mt-1 truncate font-[Fraunces] text-base text-emerald-950 sm:text-lg lg:text-xl">
-          Vector-first Hieroglyph Composer
+          Action Composer
         </h1>
       </div>
       <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto lg:justify-end">

@@ -1,64 +1,34 @@
-# JSesh-Style SVG Editor MVP
+# action-studio
 
-This is a frontend-only SVG editor MVP that mirrors JSesh copy/paste behavior while staying SVG-first. The editor composes glyphs as inline SVG, supports per-glyph transforms, and writes real SVG payloads to the clipboard.
+action-studio is a React + Vite editor for action-focused SVG composition. It combines JSesh-style glyph workflows with layer controls, transform tools, import/export actions, and selection-based image/SVG processing.
 
-## Features
+## Core Features
 
-- SVG-first composition: no canvas, no raster export, crisp at any zoom
-- Glyph library picker with search (subset of JSesh glyph IDs)
-- Horizontal flow with fixed quadrat sizing and adjustable wrap
-- Select single or multiple glyphs (shift/ctrl click)
-- Transform controls: rotate 90, flip horizontal/vertical, uniform scale
-- Copy presets: Small, Large, WYSIWYG (writes SVG to `text/html`, ids to `text/plain`)
-- Paste: reads SVG and reconstructs glyphs if metadata is present; otherwise imports SVG as a new glyph; accepts plain-text IDs
-- Extra: Copy sample inline SVG to verify vector paste into Word/Google Docs
-- UI built with Tailwind CSS utilities
+- SVG-first canvas with sharp zoom and per-item transforms
+- Glyph library with search and paginated browsing
+- Drag-and-drop placement onto rows
+- Layer panel with reorder controls (bring to front/back, move up/down)
+- Multi-select editing and keyboard shortcuts (undo/redo, zoom)
+- Copy presets: Small, Large, WYSIWYG
+- Paste support for SVG metadata, external SVG, and plain-text glyph IDs
+- Import image files (including SVG, PNG, JPG, WEBP, GIF) as managed glyphs
+- Export composition as SVG, PNG, JPG, or WEBP
 
-## Architecture
+## Editing Actions
 
-### SVG Composition
+- Geometry: rotate, flip X/Y, scale, skew, matrix values, offset X/Y
+- Image/SVG actions: remove background, replace color/background color
+- Selection tools: magic wand and pen/lasso region workflows
+- Region operations: remove selected region and apply color adjustments to selection
+- Tone and detail controls: brightness, contrast, exposure, hue, saturation, vibrance, blur, sharpen, noise
 
-- Each glyph has a base `viewBox` (default 1800 x 1800 quadrat) and body markup.
-- The editor renders an inline `<svg>` with `<symbol>` definitions for glyphs.
-- Each glyph instance is a `<g>` with a transform chain:
-  1. translate to cell
-  2. translate to quadrat center
-  3. rotate
-  4. flip and scale
-  5. fit glyph viewBox into quadrat
+## Architecture Overview
 
-This keeps all manipulation inside SVG transforms rather than CSS pixel scaling.
-
-### Glyph Loading
-
-- The app fetches the JSesh glyph directory via the GitHub API and then loads SVGs in batches.
-- This keeps glyphs vector-native while avoiding a large committed asset set.
-
-### Clipboard Implementation
-
-- Copy writes:
-  - `text/html`: inline `<svg>` with defs + `data-*` metadata per glyph
-  - `text/plain`: glyph IDs (e.g. `A1 D36 G17`)
-- Paste behavior:
-  - If SVG contains `data-glyph-id`, rebuild instances with stored transform data
-  - If SVG contains no metadata, import it as a new glyph (preserving its viewBox)
-  - If only plain text exists, parse glyph IDs and insert known glyphs
-
-### Transform Storage
-
-Each glyph instance stores:
-
-- `rotate` (degrees, per glyph/graph)
-- `flipX`, `flipY` (booleans)
-- `scale` (uniform)
-
-Transforms are applied in the SVG `transform` attribute and included in clipboard metadata.
-
-## Tradeoffs
-
-- Loading the full JSesh set can be slow and may hit GitHub API rate limits.
-- Imported SVGs are treated as a single glyph and scaled to fit the quadrat.
-- Multi-row layout is a simple fixed wrap width for scope control.
+- UI stack: React, TypeScript, Tailwind CSS
+- Rendering: inline SVG symbols and grouped transforms for glyph instances
+- Clipboard: writes SVG in `text/html` plus glyph IDs in `text/plain`
+- Loading: JSesh glyph sources fetched in batches to keep startup manageable
+- Image processing: canvas-based pixel operations for selection/mask workflows and raster export
 
 ## Run Locally
 
@@ -67,13 +37,17 @@ npm install
 npm run dev
 ```
 
-## Tailwind Notes
+## Build and Preview
 
-- Tailwind CSS is used for all UI styling.
-- If you prefer a smaller glyph subset for MVP performance, replace the GitHub API fetch with a fixed list.
+```bash
+npm run build
+npm run preview
+```
 
-## Testing Checklist
+## Quick Verification Checklist
 
-- Copy Small / Large / WYSIWYG and paste into Word or Google Docs
-- Paste SVG copied from a browser (or the Sample Inline SVG button)
-- Ensure zoom retains sharp vector edges
+- Collapse/expand sidebars and confirm layout behavior
+- Copy Small/Large/WYSIWYG and paste into external apps
+- Import an image, run magic wand or pen selection, and apply an action
+- Reorder layers and verify visual stacking updates correctly
+- Export to SVG, PNG, JPG, and WEBP and verify output files
