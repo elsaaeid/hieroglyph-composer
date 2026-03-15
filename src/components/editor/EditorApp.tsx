@@ -1923,19 +1923,19 @@ function EditorApp() {
                 <button
                   type="button"
                   onClick={() => setLeftSidebarTab('library')}
-                  className={`left-sidebar-tab-button rounded-lg px-3 py-2 text-xs font-semibold transition ${leftSidebarTab === 'library' ? 'bg-emerald-900 text-amber-50 shadow-[0_8px_16px_rgba(29,59,47,0.2)]' : 'border border-emerald-900/30 text-emerald-900 hover:-translate-y-0.5'}`}
+                  className={`left-sidebar-tab-button ${isLeftSidebarCollapsed ? 'left-sidebar-tab-button-icon-only' : ''} rounded-lg px-3 py-2 text-xs font-semibold transition ${leftSidebarTab === 'library' ? 'bg-emerald-900 text-amber-50 shadow-[0_8px_16px_rgba(29,59,47,0.2)]' : 'border border-emerald-900/30 text-emerald-900 hover:-translate-y-0.5'}`}
                   title="Glyph Library"
                   aria-label="Glyph Library"
                 >
                   <svg viewBox="0 0 24 24" className="left-sidebar-tab-icon" aria-hidden>
                     <path d="M5 6h14v2H5zM5 11h14v2H5zM5 16h14v2H5z" fill="currentColor" />
                   </svg>
-                  <span className="left-sidebar-tab-label">Glyph Library</span>
+                  {!isLeftSidebarCollapsed && <span className="left-sidebar-tab-label">Glyph Library</span>}
                 </button>
                 <button
                   type="button"
                   onClick={() => setLeftSidebarTab('transform')}
-                  className={`left-sidebar-tab-button rounded-lg px-3 py-2 text-xs font-semibold transition ${leftSidebarTab === 'transform' ? 'bg-emerald-900 text-amber-50 shadow-[0_8px_16px_rgba(29,59,47,0.2)]' : 'border border-emerald-900/30 text-emerald-900 hover:-translate-y-0.5'}`}
+                  className={`left-sidebar-tab-button ${isLeftSidebarCollapsed ? 'left-sidebar-tab-button-icon-only' : ''} rounded-lg px-3 py-2 text-xs font-semibold transition ${leftSidebarTab === 'transform' ? 'bg-emerald-900 text-amber-50 shadow-[0_8px_16px_rgba(29,59,47,0.2)]' : 'border border-emerald-900/30 text-emerald-900 hover:-translate-y-0.5'}`}
                   title="Transform and Methods"
                   aria-label="Transform and Methods"
                 >
@@ -1944,7 +1944,7 @@ function EditorApp() {
                     <circle cx="14" cy="8" r="2" fill="currentColor" />
                     <circle cx="10" cy="16" r="2" fill="currentColor" />
                   </svg>
-                  <span className="left-sidebar-tab-label">Transform & Methods</span>
+                  {!isLeftSidebarCollapsed && <span className="left-sidebar-tab-label">Actions</span>}
                 </button>
               </div>
               <button
