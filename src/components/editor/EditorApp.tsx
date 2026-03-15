@@ -1930,7 +1930,7 @@ function EditorApp() {
                   <svg viewBox="0 0 24 24" className="left-sidebar-tab-icon" aria-hidden>
                     <path d="M5 6h14v2H5zM5 11h14v2H5zM5 16h14v2H5z" fill="currentColor" />
                   </svg>
-                  {!isLeftSidebarCollapsed && <span className="left-sidebar-tab-label">Glyph Library</span>}
+                  {!isLeftSidebarCollapsed && <span className="left-sidebar-tab-label">Library</span>}
                 </button>
                 <button
                   type="button"

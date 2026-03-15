@@ -313,6 +313,30 @@
 @media (max-width: 1023px) {
   .app-sidebar-left.collapsed,
   .app-sidebar-right.collapsed {
+    width: 100%;
+    opacity: 1;
+    overflow: visible;
+    pointer-events: auto;
+  }
+
+  .app-sidebar-left.collapsed > aside {
+    padding: 0.6rem;
+  }
+
+  .app-sidebar-left.collapsed .left-sidebar-tabs {
     display: none;
+  }
+
+  .app-sidebar-left.collapsed > aside > .flex {
+    justify-content: flex-end;
+  }
+
+  .app-sidebar-right.collapsed > .relative {
+    min-height: 2.5rem;
+  }
+
+  .app-sidebar-right.collapsed > .relative > .sidebar-collapse-button {
+    position: static;
+    margin-left: auto;
   }
 }
