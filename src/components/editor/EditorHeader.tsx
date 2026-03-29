@@ -248,7 +248,7 @@ function EditorHeader({
               <svg className="ml-1 h-4 w-4" viewBox="0 0 20 20" fill="none"><path d="M6 8l4 4 4-4" stroke="#059669" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
             </button>
             {libraryDropdownOpen && (
-              <div className="absolute top-full z-50 mt-2 w-50 rounded-xl bg-white shadow-lg ring-1 ring-emerald-900/10">
+              <div className="absolute top-full right-1 z-50 mt-2 w-60 rounded-xl bg-white shadow-lg ring-1 ring-emerald-900/10">
                 <GlyphLibrary
                   glyphs={glyphs}
                   search={search}
