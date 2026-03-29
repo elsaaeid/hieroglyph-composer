@@ -69,27 +69,13 @@
 }
 
 .app-main-row {
-  margin-top: 0.75rem;
-  display: flex;
-  flex-direction: column;
   gap: 1.5rem;
 }
 
-.app-sidebar-left,
 .app-sidebar-right {
-  width: 100%;
   transition: width 0.3s ease, opacity 0.3s ease;
 }
 
-.app-sidebar-left.collapsed,
-.app-sidebar-right.collapsed {
-  width: 0;
-  opacity: 0;
-  overflow: hidden;
-  pointer-events: none;
-}
-
-.app-sidebar-left.collapsed .side-panel,
 .app-sidebar-right.collapsed .side-panel {
   display: none;
 }
@@ -142,28 +128,6 @@
   white-space: nowrap;
 }
 
-.app-sidebar-left.collapsed .left-sidebar-tabs {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-  flex: 0;
-}
-
-.app-sidebar-left.collapsed .left-sidebar-tab-button {
-  width: 2.25rem;
-  height: 2.25rem;
-  padding: 0;
-  border-radius: 0.65rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.app-sidebar-left.collapsed .left-sidebar-tab-label {
-  display: none;
-}
-
 .side-panel {
   position: sticky;
   top: 7rem;
@@ -202,10 +166,6 @@
   .app-shell {
     padding-top: 10.5rem;
   }
-
-  .app-main-row {
-    margin-top: 0.75rem;
-  }
 }
 @media (max-width: 640px) {
   .app-shell {
@@ -215,6 +175,10 @@
 @media (max-width: 600px) {
   .app-shell {
     padding-top: 12rem;
+  }
+  .app-sidebar-right{
+    position: absolute;
+    right: 10px;
   }
 }
 @media (max-width: 550px) {
@@ -226,7 +190,9 @@
   .app-shell {
     padding-top: 14rem;
   }
-
+  .app-main-row {
+    margin-top: -40px;
+  }
   .header-kicker {
     font-size: 0.62rem;
   }
@@ -264,7 +230,6 @@
   }
 
   .app-sidebar-right {
-    width: 17rem;
     flex-shrink: 0;
   }
 
@@ -272,18 +237,6 @@
     flex: 1 1 0%;
     min-width: 0;
   }
-
-  .app-sidebar-left.collapsed {
-    width: 3rem;
-    opacity: 1;
-    pointer-events: auto;
-  }
-
-  .app-sidebar-left.collapsed > aside > .flex {
-    flex-direction: column;
-    align-items: center;
-  }
-
   .app-sidebar-right.collapsed {
     width: 3rem;
     opacity: 1;
@@ -311,24 +264,10 @@
 }
 
 @media (max-width: 1023px) {
-  .app-sidebar-left.collapsed,
   .app-sidebar-right.collapsed {
-    width: 100%;
     opacity: 1;
     overflow: visible;
     pointer-events: auto;
-  }
-
-  .app-sidebar-left.collapsed > aside {
-    padding: 0.6rem;
-  }
-
-  .app-sidebar-left.collapsed .left-sidebar-tabs {
-    display: none;
-  }
-
-  .app-sidebar-left.collapsed > aside > .flex {
-    justify-content: flex-end;
   }
 
   .app-sidebar-right.collapsed > .relative {

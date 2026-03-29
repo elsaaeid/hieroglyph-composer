@@ -13,10 +13,8 @@ import {
 } from './svgUtils'
 import EditorHeader from './EditorHeader'
 import EditorToolbar from './EditorToolbar'
-import GlyphLibrary from './GlyphLibrary.tsx'
 import EditorCanvas from './EditorCanvas.tsx'
 import StatusBar from './StatusBar'
-import TransformPanel from './TransformPanel'
 import LayerPanel from './LayerPanel'
 
 function EditorApp() {
@@ -42,12 +40,12 @@ function EditorApp() {
   const [activeRowIndex, setActiveRowIndex] = useState(0)
   const [showPasteFallback, setShowPasteFallback] = useState(false)
   const [pasteFallbackText, setPasteFallbackText] = useState('')
-  const [leftSidebarTab, setLeftSidebarTab] = useState<'library' | 'transform'>('library')
+  // Removed unused leftSidebarTab state
   const [magicWandMode, setMagicWandMode] = useState(false)
   const [penToolMode, setPenToolMode] = useState(false)
   const [undoStack, setUndoStack] = useState<EditorSnapshot[]>([])
   const [redoStack, setRedoStack] = useState<EditorSnapshot[]>([])
-  const [isLeftSidebarCollapsed, setIsLeftSidebarCollapsed] = useState(false)
+  // Removed unused isLeftSidebarCollapsed state
   const [isRightSidebarCollapsed, setIsRightSidebarCollapsed] = useState(false)
   const applyingHistoryRef = useRef(false)
   const lastCheckpointRef = useRef<number>(0)
@@ -293,7 +291,8 @@ function EditorApp() {
   const canEditSvgActions = useMemo(() => {
     if (!primarySelection) return false
     const glyph = glyphMap.get(primarySelection.glyphId)
-    return Boolean(glyph && glyph.source === 'imported' && !isRasterImportedGlyph(glyph))
+    // Enable for any non-raster glyph (imported or not)
+    return Boolean(glyph && !isRasterImportedGlyph(glyph))
   }, [primarySelection, glyphMap])
 
   const newInstanceId = () => `instance-${Date.now()}-${Math.random().toString(16).slice(2)}`
@@ -562,32 +561,7 @@ function EditorApp() {
     setStatus('Rotate 90°')
   }
 
-  const handleFlipX = () => {
-    recordHistoryCheckpoint()
-    applyToSelected((item) => ({
-      ...item,
-      flipX: !item.flipX,
-    }))
-    setStatus('Flip horizontal')
-  }
 
-  const handleFlipY = () => {
-    recordHistoryCheckpoint()
-    applyToSelected((item) => ({
-      ...item,
-      flipY: !item.flipY,
-    }))
-    setStatus('Flip vertical')
-  }
-
-  const handleScale = (value: number) => {
-    applyToSelected((item) => ({
-      ...item,
-      scale: value,
-      scaleX: value,
-      scaleY: value,
-    }))
-  }
 
   const handleTranslate = (deltaX: number, deltaY: number) => {
     recordHistoryCheckpointIfNeeded()
@@ -643,18 +617,7 @@ function EditorApp() {
     applyToSelected((item) => ({ ...item, skewY: value }))
   }
 
-  const handleSetMatrix = (value: [number, number, number, number, number, number]) => {
-    recordHistoryCheckpointIfNeeded()
-    applyToSelected((item) => ({
-      ...item,
-      matrixA: value[0],
-      matrixB: value[1],
-      matrixC: value[2],
-      matrixD: value[3],
-      matrixE: value[4],
-      matrixF: value[5],
-    }))
-  }
+
 
   const handleSetBrightness = (value: number) => {
     recordHistoryCheckpointIfNeeded()
@@ -769,14 +732,14 @@ function EditorApp() {
     zoomSelectedImages(1 / 1.1)
   }
 
-  const getSelectedImportedSvgIds = () =>
+  const getSelectedSvgIds = () =>
     new Set(
       rows
         .flat()
         .filter((instance) => selectedIds.includes(instance.id))
         .filter((instance) => {
           const glyph = glyphMap.get(instance.glyphId)
-          return Boolean(glyph && glyph.source === 'imported' && !isRasterImportedGlyph(glyph))
+          return Boolean(glyph && !isRasterImportedGlyph(glyph))
         })
         .map((instance) => instance.id)
     )
@@ -785,9 +748,9 @@ function EditorApp() {
     update: (item: GlyphInstance) => GlyphInstance,
     actionLabel: string
   ) => {
-    const selectedSvgIds = getSelectedImportedSvgIds()
+    const selectedSvgIds = getSelectedSvgIds()
     if (selectedSvgIds.size === 0) {
-      setStatus('Select an imported SVG glyph first')
+      setStatus('Select a vector SVG glyph first')
       return
     }
 
@@ -1396,17 +1359,7 @@ function EditorApp() {
     }
   }
 
-  const hexToRgb = (hex: string) => {
-    const value = hex.replace('#', '').trim()
-    const safe = value.length === 3 ? value.split('').map((c) => c + c).join('') : value
-    if (!/^[0-9a-fA-F]{6}$/.test(safe)) return { r: 0, g: 0, b: 0 }
-    const num = Number.parseInt(safe, 16)
-    return {
-      r: (num >> 16) & 255,
-      g: (num >> 8) & 255,
-      b: num & 255,
-    }
-  }
+
 
   const rgbToHsl = (r: number, g: number, b: number): [number, number, number] => {
     const rn = r / 255
@@ -1500,108 +1453,9 @@ function EditorApp() {
     }, 'Selection methods', { requireSelectionMask: true })
   }
 
-  const handleReplaceBackgroundColor = async (
-    sourceColor: string,
-    targetColor: string,
-    tolerance: number
-  ) => {
-    recordHistoryCheckpoint()
-    const source = hexToRgb(sourceColor)
-    const target = hexToRgb(targetColor)
-    await applyImageProcessorToSelection((ctx, width, height, _instance, mask) => {
-      void _instance
-      const imageData = ctx.getImageData(0, 0, width, height)
-      const data = imageData.data
-      const hasMask = Boolean(mask && mask.some((value) => value === 1))
 
-      const idx = (x: number, y: number) => (y * width + x) * 4
-      const isBackgroundLike = (x: number, y: number) => {
-        const i = idx(x, y)
-        const alpha = data[i + 3]
-        if (alpha <= 10) return true
-        const dist = Math.hypot(data[i] - source.r, data[i + 1] - source.g, data[i + 2] - source.b)
-        return dist <= tolerance
-      }
 
-      if (hasMask && mask) {
-        for (let y = 0; y < height; y += 1) {
-          for (let x = 0; x < width; x += 1) {
-            const vi = y * width + x
-            if (!mask[vi] || !isBackgroundLike(x, y)) continue
-            const i = idx(x, y)
-            data[i] = target.r
-            data[i + 1] = target.g
-            data[i + 2] = target.b
-            data[i + 3] = 255
-          }
-        }
 
-        ctx.putImageData(imageData, 0, 0)
-        return
-      }
-
-      const visited = new Uint8Array(width * height)
-
-      const stack: Array<[number, number]> = []
-      for (let x = 0; x < width; x += 1) {
-        stack.push([x, 0])
-        stack.push([x, height - 1])
-      }
-      for (let y = 1; y < height - 1; y += 1) {
-        stack.push([0, y])
-        stack.push([width - 1, y])
-      }
-
-      while (stack.length > 0) {
-        const [x, y] = stack.pop() as [number, number]
-        if (x < 0 || y < 0 || x >= width || y >= height) continue
-        const vi = y * width + x
-        if (visited[vi]) continue
-        visited[vi] = 1
-        if (!isBackgroundLike(x, y)) continue
-
-        const i = idx(x, y)
-        data[i] = target.r
-        data[i + 1] = target.g
-        data[i + 2] = target.b
-        data[i + 3] = 255
-
-        stack.push([x + 1, y])
-        stack.push([x - 1, y])
-        stack.push([x, y + 1])
-        stack.push([x, y - 1])
-      }
-
-      ctx.putImageData(imageData, 0, 0)
-    }, 'Background color replacement')
-  }
-
-  const handleReplaceColor = async (
-    sourceColor: string,
-    targetColor: string,
-    tolerance: number
-  ) => {
-    recordHistoryCheckpoint()
-    const source = hexToRgb(sourceColor)
-    const target = hexToRgb(targetColor)
-    await applyImageProcessorToSelection((ctx, width, height, _instance, mask) => {
-      void _instance
-      const imageData = ctx.getImageData(0, 0, width, height)
-      const data = imageData.data
-      for (let i = 0; i < data.length; i += 4) {
-        if (data[i + 3] === 0) continue
-
-        const dist = Math.hypot(data[i] - source.r, data[i + 1] - source.g, data[i + 2] - source.b)
-        if (mask && !mask[i / 4]) continue
-        if (dist <= tolerance) {
-          data[i] = target.r
-          data[i + 1] = target.g
-          data[i + 2] = target.b
-        }
-      }
-      ctx.putImageData(imageData, 0, 0)
-    }, 'Color replacement')
-  }
 
   const handleRemoveSelectedRegion = async () => {
     await applyImageProcessorToSelection((ctx, width, height, _instance, mask) => {
@@ -1914,131 +1768,102 @@ function EditorApp() {
         onPaste={handlePaste}
         onImportImage={handleImportImage}
         onExport={handleExport}
+        imageEditingEnabled={canEditImageColors}
+        magicWandMode={magicWandMode}
+        penToolMode={penToolMode}
+        brightnessValue={primarySelection?.brightness ?? null}
+        contrastValue={primarySelection?.contrast ?? null}
+        exposureValue={primarySelection?.exposure ?? null}
+        hueValue={primarySelection?.hue ?? null}
+        saturationValue={primarySelection?.saturation ?? null}
+        vibranceValue={primarySelection?.vibrance ?? null}
+        blurValue={primarySelection?.blur ?? null}
+        sharpenValue={primarySelection?.sharpen ?? null}
+        noiseValue={primarySelection?.noise ?? null}
+        onBrightnessChange={handleSetBrightness}
+        onContrastChange={handleSetContrast}
+        onExposureChange={handleSetExposure}
+        onHueChange={handleSetHue}
+        onSaturationChange={handleSetSaturation}
+        onVibranceChange={handleSetVibrance}
+        onBlurChange={handleSetBlur}
+        onSharpenChange={handleSetSharpen}
+        onNoiseChange={handleSetNoise}
+        onRemoveBackground={handleRemoveBackground}
+        onRemoveSelectedRegion={handleRemoveSelectedRegion}
+        // Edit controls
+        offsetX={primarySelection?.offsetX ?? null}
+        offsetY={primarySelection?.offsetY ?? null}
+        rotateValue={primarySelection?.rotate ?? null}
+        scaleValue={primarySelection ? Math.max(primarySelection.scale, primarySelection.scaleX, primarySelection.scaleY) : null}
+        skewXValue={primarySelection?.skewX ?? null}
+        skewYValue={primarySelection?.skewY ?? null}
+        onOffsetXChange={handleSetOffsetX}
+        onOffsetYChange={handleSetOffsetY}
+        onRotateChange={handleSetRotate}
+        onRotate={handleRotate}
+        onScale={handleSetScale}
+        onSkewXChange={handleSetSkewX}
+        onSkewYChange={handleSetSkewY}
+        // Image actions for dropdown
+        onMagicWand={handleMagicWand}
+        onPenToolToggle={handlePenToolToggle}
+        onApplyMethodsToSelection={handleApplyMethodsToSelection}
+        onImageReflectX={handleImageReflectX}
+        onImageReflectY={handleImageReflectY}
+        onImageZoomIn={handleZoomImageIn}
+        onImageZoomOut={handleZoomImageOut}
+        // SVG Actions for Edit dropdown
+        canEditSvgActions={canEditSvgActions}
+        onSvgReflectX={handleSvgReflectX}
+        onSvgReflectY={handleSvgReflectY}
+        onSvgZoomIn={handleSvgZoomIn}
+        onSvgZoomOut={handleSvgZoomOut}
+        onCopyExternal={handleCopyExternal}
+        glyphs={pagedGlyphs}
+        search={search}
+        page={safePage}
+        pageCount={pageCount}
+        totalCount={filteredGlyphs.length}
+        isLoading={isLoadingGlyphs}
+        onSearchChange={setSearch}
+        onPageChange={(nextPage) => setPage(Math.min(Math.max(1, nextPage), pageCount))}
+        onAddGlyph={addGlyph}
       />
-      <div className="app-main-row">
-        <div className={`app-sidebar-left ${isLeftSidebarCollapsed ? 'collapsed' : ''}`}>
-          <aside className="min-w-0 rounded-2xl bg-white/90 p-4 shadow-[0_18px_36px_rgba(27,26,23,0.12)] flex flex-col gap-3">
-            <div className="flex items-center justify-between gap-2">
-              <div className={`left-sidebar-tabs ${isLeftSidebarCollapsed ? 'is-collapsed' : ''}`}>
+      <div className="app-main-row flex flex-row gap-4 w-full">
+        {/* Mobile: Sidebar inside artboard (above toolbar/canvas), Desktop: Sidebar right */}
+        <main className="app-canvas min-w-0 rounded-2xl bg-white/90 p-5 shadow-[0_18px_36px_rgba(27,26,23,0.12)] flex flex-col gap-4 min-h-0 flex-1 relative">
+          {/* Mobile sidebar (above artboard content) */}
+          <div className="block sm:hidden mb-4">
+            <div className={`app-sidebar-right ${isRightSidebarCollapsed ? 'collapsed' : ''}`}> 
+              <div className="relative">
                 <button
                   type="button"
-                  onClick={() => setLeftSidebarTab('library')}
-                  className={`left-sidebar-tab-button ${isLeftSidebarCollapsed ? 'left-sidebar-tab-button-icon-only' : ''} rounded-lg px-3 py-2 text-xs font-semibold transition ${leftSidebarTab === 'library' ? 'bg-emerald-900 text-amber-50 shadow-[0_8px_16px_rgba(29,59,47,0.2)]' : 'border border-emerald-900/30 text-emerald-900 hover:-translate-y-0.5'}`}
-                  title="Glyph Library"
-                  aria-label="Glyph Library"
+                  onClick={() => setIsRightSidebarCollapsed(!isRightSidebarCollapsed)}
+                  className="absolute right-5 top-5 z-10 sidebar-collapse-button"
+                  title={isRightSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
                 >
-                  <svg viewBox="0 0 24 24" className="left-sidebar-tab-icon" aria-hidden>
-                    <path d="M5 6h14v2H5zM5 11h14v2H5zM5 16h14v2H5z" fill="currentColor" />
-                  </svg>
-                  {!isLeftSidebarCollapsed && <span className="left-sidebar-tab-label">Library</span>}
+                  {isRightSidebarCollapsed ? '◀' : '▶'}
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setLeftSidebarTab('transform')}
-                  className={`left-sidebar-tab-button ${isLeftSidebarCollapsed ? 'left-sidebar-tab-button-icon-only' : ''} rounded-lg px-3 py-2 text-xs font-semibold transition ${leftSidebarTab === 'transform' ? 'bg-emerald-900 text-amber-50 shadow-[0_8px_16px_rgba(29,59,47,0.2)]' : 'border border-emerald-900/30 text-emerald-900 hover:-translate-y-0.5'}`}
-                  title="Transform and Methods"
-                  aria-label="Transform and Methods"
-                >
-                  <svg viewBox="0 0 24 24" className="left-sidebar-tab-icon" aria-hidden>
-                    <path d="M4 7h9v2H4zM15 7h5v2h-5zM4 15h5v2H4zM11 15h9v2h-9z" fill="currentColor" />
-                    <circle cx="14" cy="8" r="2" fill="currentColor" />
-                    <circle cx="10" cy="16" r="2" fill="currentColor" />
-                  </svg>
-                  {!isLeftSidebarCollapsed && <span className="left-sidebar-tab-label">Actions</span>}
-                </button>
+                {!isRightSidebarCollapsed && (
+                  <LayerPanel
+                    layers={layerEntries}
+                    onSelectLayer={setSelection}
+                    onBringToFront={handleBringLayerToTop}
+                    onBringForward={handleBringLayerUp}
+                    onSendBackward={handleBringLayerDown}
+                    onSendToBack={handleSendLayerToBottom}
+                    onLayerSelectOnly={handleLayerSelectOnly}
+                    onLayerBringToFront={handleLayerBringToFront}
+                    onLayerBringForward={handleLayerBringForward}
+                    onLayerSendBackward={handleLayerSendBackward}
+                    onLayerSendToBack={handleLayerSendToBack}
+                    onLayerDelete={handleLayerDelete}
+                  />
+                )}
               </div>
-              <button
-                type="button"
-                onClick={() => setIsLeftSidebarCollapsed(!isLeftSidebarCollapsed)}
-                className="sidebar-collapse-button"
-                title={isLeftSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-              >
-                {isLeftSidebarCollapsed ? '▶' : '◀'}
-              </button>
             </div>
-          </aside>
-
-          {leftSidebarTab === 'library' ? (
-            <GlyphLibrary
-              glyphs={pagedGlyphs}
-              search={search}
-              page={safePage}
-              pageCount={pageCount}
-              totalCount={filteredGlyphs.length}
-              isLoading={isLoadingGlyphs}
-              onSearchChange={setSearch}
-              onPageChange={(nextPage) => setPage(Math.min(Math.max(1, nextPage), pageCount))}
-              onAddGlyph={addGlyph}
-            />
-          ) : (
-            <TransformPanel
-              selectedCount={selectedIds.length}
-              canEditImageColors={canEditImageColors}
-              canEditSvgActions={canEditSvgActions}
-              magicWandMode={magicWandMode}
-              penToolMode={penToolMode}
-              offsetX={primarySelection?.offsetX ?? null}
-              offsetY={primarySelection?.offsetY ?? null}
-              rotateValue={primarySelection?.rotate ?? null}
-              scaleValue={primarySelection ? Math.max(primarySelection.scale, primarySelection.scaleX, primarySelection.scaleY) : null}
-              skewXValue={primarySelection?.skewX ?? null}
-              skewYValue={primarySelection?.skewY ?? null}
-              matrixValue={primarySelection ? [
-                primarySelection.matrixA,
-                primarySelection.matrixB,
-                primarySelection.matrixC,
-                primarySelection.matrixD,
-                primarySelection.matrixE,
-                primarySelection.matrixF,
-              ] : null}
-              brightnessValue={primarySelection?.brightness ?? null}
-              contrastValue={primarySelection?.contrast ?? null}
-              exposureValue={primarySelection?.exposure ?? null}
-              hueValue={primarySelection?.hue ?? null}
-              saturationValue={primarySelection?.saturation ?? null}
-              vibranceValue={primarySelection?.vibrance ?? null}
-              blurValue={primarySelection?.blur ?? null}
-              sharpenValue={primarySelection?.sharpen ?? null}
-              noiseValue={primarySelection?.noise ?? null}
-              onOffsetXChange={handleSetOffsetX}
-              onOffsetYChange={handleSetOffsetY}
-              onRotateChange={handleSetRotate}
-              onRotate={handleRotate}
-              onFlipX={handleFlipX}
-              onFlipY={handleFlipY}
-              onScale={handleScale}
-              onSkewXChange={handleSetSkewX}
-              onSkewYChange={handleSetSkewY}
-              onMatrixChange={handleSetMatrix}
-              onBrightnessChange={handleSetBrightness}
-              onContrastChange={handleSetContrast}
-              onExposureChange={handleSetExposure}
-              onHueChange={handleSetHue}
-              onSaturationChange={handleSetSaturation}
-              onVibranceChange={handleSetVibrance}
-              onBlurChange={handleSetBlur}
-              onSharpenChange={handleSetSharpen}
-              onNoiseChange={handleSetNoise}
-              onRemoveBackground={handleRemoveBackground}
-              onRemoveSelectedRegion={handleRemoveSelectedRegion}
-              onMagicWand={handleMagicWand}
-              onPenToolToggle={handlePenToolToggle}
-              onApplyMethodsToSelection={handleApplyMethodsToSelection}
-              onImageReflectX={handleImageReflectX}
-              onImageReflectY={handleImageReflectY}
-              onImageZoomIn={handleZoomImageIn}
-              onImageZoomOut={handleZoomImageOut}
-              onSvgReflectX={handleSvgReflectX}
-              onSvgReflectY={handleSvgReflectY}
-              onSvgZoomIn={handleSvgZoomIn}
-              onSvgZoomOut={handleSvgZoomOut}
-              onReplaceBackgroundColor={handleReplaceBackgroundColor}
-              onReplaceColor={handleReplaceColor}
-              onCopyExternal={handleCopyExternal}
-            />
-          )}
-        </div>
-        <main className="app-canvas min-w-0 rounded-2xl bg-white/90 p-5 shadow-[0_18px_36px_rgba(27,26,23,0.12)] flex flex-col gap-4 min-h-0">
+          </div>
           <EditorToolbar
             zoom={zoom}
             onZoomChange={(value) => setZoom(value)}
@@ -2132,7 +1957,10 @@ function EditorApp() {
             count={rows.reduce((total, row) => total + row.length, 0)}
           />
         </main>
-        <div className={`app-sidebar-right ${isRightSidebarCollapsed ? 'collapsed' : ''}`}>
+        {/* Desktop sidebar (right of artboard) */}
+        <div
+          className={`app-sidebar-right hidden sm:block ${isRightSidebarCollapsed ? 'collapsed' : ''}`}
+        >
           <div className="relative">
             <button
               type="button"
@@ -2144,18 +1972,18 @@ function EditorApp() {
             </button>
             {!isRightSidebarCollapsed && (
               <LayerPanel
-              layers={layerEntries}
-              onSelectLayer={setSelection}
-              onBringToFront={handleBringLayerToTop}
-              onBringForward={handleBringLayerUp}
-              onSendBackward={handleBringLayerDown}
-              onSendToBack={handleSendLayerToBottom}
-              onLayerSelectOnly={handleLayerSelectOnly}
-              onLayerBringToFront={handleLayerBringToFront}
-              onLayerBringForward={handleLayerBringForward}
-              onLayerSendBackward={handleLayerSendBackward}
-              onLayerSendToBack={handleLayerSendToBack}
-              onLayerDelete={handleLayerDelete}
+                layers={layerEntries}
+                onSelectLayer={setSelection}
+                onBringToFront={handleBringLayerToTop}
+                onBringForward={handleBringLayerUp}
+                onSendBackward={handleBringLayerDown}
+                onSendToBack={handleSendLayerToBottom}
+                onLayerSelectOnly={handleLayerSelectOnly}
+                onLayerBringToFront={handleLayerBringToFront}
+                onLayerBringForward={handleLayerBringForward}
+                onLayerSendBackward={handleLayerSendBackward}
+                onLayerSendToBack={handleLayerSendToBack}
+                onLayerDelete={handleLayerDelete}
               />
             )}
           </div>
