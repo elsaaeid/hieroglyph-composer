@@ -136,102 +136,105 @@ function EditorHeader({
       <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto lg:justify-end">
         {/* Row for File, Image, Edit, and Library dropdowns */}
         <div className="flex flex-row flex-wrap gap-2">
-          <button
-            className="header-button flex items-center gap-2 rounded-full bg-emerald-900 px-4 py-2 text-sm font-semibold text-amber-50 shadow transition hover:-translate-y-0.5 hover:shadow-[0_10px_20px_rgba(29,59,47,0.2)]"
-            onClick={() => setDropdownOpen((v) => !v)}
-            aria-haspopup="true"
-            aria-expanded={dropdownOpen}
-          >
-            <FileIcon width={20} height={20} />
-            File
-            <svg className="ml-1 h-4 w-4" viewBox="0 0 20 20" fill="none"><path d="M6 8l4 4 4-4" stroke="#FBBF24" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-          </button>
-          {dropdownOpen && (
-            <div className="absolute right-0 top-full z-50 mt-2 min-w-50 rounded-xl bg-white shadow-lg ring-1 ring-emerald-900/10">
-              <ul className="py-2">
-                <li>
-                  <button
-                    className="flex w-full items-center gap-2 px-4 py-2 text-sm text-emerald-900 hover:bg-emerald-50"
-                    onClick={() => { onCopy('small'); setDropdownOpen(false) }}
-                  >
-                    <CopyIcon width={18} height={18} />Copy Small
-                  </button>
-                </li>
-                <li>
-                  <button
-                    className="flex w-full items-center gap-2 px-4 py-2 text-sm text-emerald-900 hover:bg-emerald-50"
-                    onClick={() => { onCopy('large'); setDropdownOpen(false) }}
-                  >
-                    <CopyIcon width={18} height={18} />Copy Large
-                  </button>
-                </li>
-                <li>
-                  <button
-                    className="flex w-full items-center gap-2 px-4 py-2 text-sm text-emerald-900 hover:bg-emerald-50"
-                    onClick={() => { onCopy('wysiwyg'); setDropdownOpen(false) }}
-                  >
-                    <CopyIcon width={18} height={18} />Copy WYSIWYG
-                  </button>
-                </li>
-                <li>
-                  <button
-                    className="flex w-full items-center gap-2 px-4 py-2 text-sm text-emerald-900 hover:bg-emerald-50"
-                    onClick={() => { onPaste(); setDropdownOpen(false) }}
-                  >
-                    <PasteIcon width={18} height={18} />Paste
-                  </button>
-                </li>
-                <li>
-                  <label className="flex w-full items-center gap-2 px-4 py-2 text-sm text-emerald-900 hover:bg-emerald-50 cursor-pointer">
-                    <ImportIcon width={18} height={18} />Import
-                    <input
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      className="hidden"
-                      onChange={(event) => {
-                        onImportImage(event.target.files)
-                        event.currentTarget.value = ''
-                        setDropdownOpen(false)
-                      }}
-                    />
-                  </label>
-                </li>
-                <li>
-                  <div className="flex w-full items-center gap-2 px-4 py-2 text-sm text-emerald-900">
-                    <ExportIcon width={18} height={18} />
-                    <select
-                      className="w-32 rounded-full border border-emerald-900/30 bg-amber-50/40 px-3 py-1 text-sm text-emerald-900"
-                      defaultValue=""
-                      onChange={(event) => {
-                        const value = event.target.value as ExportFormat | ''
-                        if (!value) return
-                        onExport(value)
-                        event.currentTarget.value = ''
-                        setDropdownOpen(false)
-                      }}
+          {/* File Dropdown (refactored to match Image Dropdown structure) */}
+          <div className="relative" ref={dropdownRef}>
+            <button
+              className="header-button flex items-center gap-2 rounded-full bg-emerald-900 px-4 py-2 text-sm font-semibold text-amber-50 shadow transition hover:-translate-y-0.5 hover:shadow-[0_10px_20px_rgba(29,59,47,0.2)]"
+              onClick={() => setDropdownOpen((v) => !v)}
+              aria-haspopup="true"
+              aria-expanded={dropdownOpen}
+            >
+              <FileIcon width={20} height={20} />
+              File
+              <svg className="ml-1 h-4 w-4" viewBox="0 0 20 20" fill="none"><path d="M6 8l4 4 4-4" stroke="#FBBF24" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            </button>
+            {dropdownOpen && (
+              <div className="absolute top-full z-50 mt-2 min-w-50 rounded-xl bg-white shadow-lg ring-1 ring-emerald-900/10 overflow-auto max-h-96">
+                <ul className="py-2">
+                  <li>
+                    <button
+                      className="flex w-full items-center gap-2 px-4 py-2 text-sm text-emerald-900 hover:bg-emerald-50"
+                      onClick={() => { onCopy('small'); setDropdownOpen(false) }}
                     >
-                      <option value="" disabled>
-                        Export as...
-                      </option>
-                      <option value="svg">SVG</option>
-                      <option value="png">PNG</option>
-                      <option value="jpg">JPG</option>
-                      <option value="webp">WEBP</option>
-                    </select>
-                  </div>
-                </li>
-                <li>
-                  <button
-                    className="flex w-full items-center gap-2 px-4 py-2 text-sm text-emerald-900 hover:bg-emerald-50"
-                    onClick={onCopyExternal}
-                  >
-                    <CopyIcon width={18} height={18} />Copy Sample Inline SVG
-                  </button>
-                </li>
-              </ul>
-            </div>
-          )}
+                      <CopyIcon width={18} height={18} />Copy Small
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      className="flex w-full items-center gap-2 px-4 py-2 text-sm text-emerald-900 hover:bg-emerald-50"
+                      onClick={() => { onCopy('large'); setDropdownOpen(false) }}
+                    >
+                      <CopyIcon width={18} height={18} />Copy Large
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      className="flex w-full items-center gap-2 px-4 py-2 text-sm text-emerald-900 hover:bg-emerald-50"
+                      onClick={() => { onCopy('wysiwyg'); setDropdownOpen(false) }}
+                    >
+                      <CopyIcon width={18} height={18} />Copy WYSIWYG
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      className="flex w-full items-center gap-2 px-4 py-2 text-sm text-emerald-900 hover:bg-emerald-50"
+                      onClick={() => { onPaste(); setDropdownOpen(false) }}
+                    >
+                      <PasteIcon width={18} height={18} />Paste
+                    </button>
+                  </li>
+                  <li>
+                    <label className="flex w-full items-center gap-2 px-4 py-2 text-sm text-emerald-900 hover:bg-emerald-50 cursor-pointer">
+                      <ImportIcon width={18} height={18} />Import
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        className="hidden"
+                        onChange={(event) => {
+                          onImportImage(event.target.files)
+                          event.currentTarget.value = ''
+                          setDropdownOpen(false)
+                        }}
+                      />
+                    </label>
+                  </li>
+                  <li>
+                    <div className="flex w-full items-center gap-2 px-4 py-2 text-sm text-emerald-900">
+                      <ExportIcon width={18} height={18} />
+                      <select
+                        className="w-32 rounded-full border border-emerald-900/30 bg-amber-50/40 px-3 py-1 text-sm text-emerald-900"
+                        defaultValue=""
+                        onChange={(event) => {
+                          const value = event.target.value as ExportFormat | ''
+                          if (!value) return
+                          onExport(value)
+                          event.currentTarget.value = ''
+                          setDropdownOpen(false)
+                        }}
+                      >
+                        <option value="" disabled>
+                          Export as...
+                        </option>
+                        <option value="svg">SVG</option>
+                        <option value="png">PNG</option>
+                        <option value="jpg">JPG</option>
+                        <option value="webp">WEBP</option>
+                      </select>
+                    </div>
+                  </li>
+                  <li>
+                    <button
+                      className="flex w-full items-center gap-2 px-4 py-2 text-sm text-emerald-900 hover:bg-emerald-50"
+                      onClick={onCopyExternal}
+                    >
+                      <CopyIcon width={18} height={18} />Copy Sample Inline SVG
+                    </button>
+                  </li>
+                </ul>
+              </div>
+            )}
+          </div>
           {/* Library Dropdown */}
           <div className="relative" ref={libraryDropdownRef}>
             <button
