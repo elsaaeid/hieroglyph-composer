@@ -148,7 +148,7 @@ function LayerPanel({
   }
 
   return (
-    <aside className="side-panel min-w-0 rounded-2xl bg-white/90 p-5 shadow-[0_18px_36px_rgba(27,26,23,0.12)] flex flex-col gap-4 overflow-hidden relative">
+    <aside className="side-panel min-w-0 rounded-2xl bg-white p-5 shadow-[0_18px_36px_rgba(27,26,23,0.12)] flex flex-col gap-4 overflow-hidden relative">
       <div className="flex flex-col gap-1">
         <h2 className="text-lg font-semibold text-emerald-950">Layers</h2>
         <p className="text-xs text-stone-600">

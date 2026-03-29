@@ -1840,7 +1840,7 @@ function EditorApp() {
                 <button
                   type="button"
                   onClick={() => setIsRightSidebarCollapsed(!isRightSidebarCollapsed)}
-                  className="absolute top-5 z-10 sidebar-collapse-button"
+                  className="sidebar-collapse-button"
                   title={isRightSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
                 >
                   {isRightSidebarCollapsed ? '◀' : '▶'}

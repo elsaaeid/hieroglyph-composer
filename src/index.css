@@ -82,21 +82,35 @@
   width: 100%;
 }
 
+
 .sidebar-collapse-button {
+  position: static;
+  margin-left: auto;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 2rem;
-  height: 2rem;
+  width: 2.5rem;
+  height: 2.5rem;
+  min-width: 2rem;
+  min-height: 2rem;
+  max-width: 3rem;
+  max-height: 3rem;
   border-radius: 0.5rem;
   border: 1px solid rgba(27, 89, 59, 0.3);
   background: transparent;
   color: rgb(27, 89, 59);
   cursor: pointer;
   transition: all 0.2s ease;
-  flex-shrink: 0;
+  font-size: 1rem;
+  padding: 10px;
+  box-sizing: border-box;
 }
 
+.sidebar-collapse-button > * {
+  max-width: 100%;
+  max-height: 100%;
+  font-size: 1.1em;
+}
 .sidebar-collapse-button:hover {
   background: rgba(27, 89, 59, 0.1);
   transform: translate(-1px, 0);
@@ -129,6 +143,7 @@
 .side-panel {
   position: sticky;
   top: 7rem;
+  z-index: 1;
   align-self: flex-start;
   max-height: calc(100vh - 140px);
 }
@@ -173,11 +188,15 @@
     pointer-events: auto;
   }
 
+
   .app-sidebar-right.collapsed > .relative > .sidebar-collapse-button {
-    position: static;
-    width: 100%;
+    min-width: 2rem;
+    max-width: 3rem;
     height: auto;
-    padding: 0.5rem;
+    min-height: 2rem;
+    max-height: 3rem;
+    padding: 0.5rem 0.25rem;
+    font-size: 1.1rem;
   }
 
   .app-sidebar-right.collapsed > .relative > * {
@@ -205,8 +224,12 @@
   }
 
   .app-sidebar-right.collapsed > .relative > .sidebar-collapse-button {
-    position: static;
-    margin-left: auto;
+    width: 2.2rem;
+    height: 2.2rem;
+    min-width: 1.8rem;
+    min-height: 1.8rem;
+    font-size: 1rem;
+    padding: 0.25rem 0.25rem;
   }
   .app-main-row {
     margin-top: 150px;
@@ -218,11 +241,33 @@
     position: absolute;
     right: 10px;
   }
+  .sidebar-collapse-button {
+    width: 2rem;
+    height: 2rem;
+    min-width: 1.5rem;
+    min-height: 1.5rem;
+    font-size: 0.95rem;
+    padding: 0.15rem 0.2rem;
+  }
+  .sidebar-collapse-button > * {
+    font-size: 1em;
+  }
 }
 @media (max-width: 568px) {
-    .app-main-row {
+  .app-main-row {
     margin-top: 180px;
     padding: 10px;
+  }
+  .sidebar-collapse-button {
+    width: 1.7rem;
+    height: 1.7rem;
+    min-width: 1.2rem;
+    min-height: 1.2rem;
+    font-size: 0.85rem;
+    padding: 0.1rem 0.15rem;
+  }
+  .sidebar-collapse-button > * {
+    font-size: 0.95em;
   }
 }
 @media (max-width: 500px) {
@@ -240,6 +285,17 @@
 
   .header-tooltip {
     font-size: 0.7rem;
+  }
+  .sidebar-collapse-button {
+    width: 1.5rem;
+    height: 1.5rem;
+    min-width: 1rem;
+    min-height: 1rem;
+    font-size: 0.8rem;
+    padding: 0.08rem 0.1rem;
+  }
+  .sidebar-collapse-button > * {
+    font-size: 0.9em;
   }
 }
 
