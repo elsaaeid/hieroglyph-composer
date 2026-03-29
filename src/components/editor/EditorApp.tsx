@@ -46,7 +46,7 @@ function EditorApp() {
   const [undoStack, setUndoStack] = useState<EditorSnapshot[]>([])
   const [redoStack, setRedoStack] = useState<EditorSnapshot[]>([])
   // Removed unused isLeftSidebarCollapsed state
-  const [isRightSidebarCollapsed, setIsRightSidebarCollapsed] = useState(false)
+  const [isRightSidebarCollapsed, setIsRightSidebarCollapsed] = useState(true)
   const applyingHistoryRef = useRef(false)
   const lastCheckpointRef = useRef<number>(0)
   const checkpointDebounceMs = 300
@@ -1840,7 +1840,7 @@ function EditorApp() {
                 <button
                   type="button"
                   onClick={() => setIsRightSidebarCollapsed(!isRightSidebarCollapsed)}
-                  className="absolute right-5 top-5 z-10 sidebar-collapse-button"
+                  className="absolute top-5 z-10 sidebar-collapse-button"
                   title={isRightSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
                 >
                   {isRightSidebarCollapsed ? '◀' : '▶'}

@@ -245,7 +245,7 @@ function EditorHeader({
               <svg className="ml-1 h-4 w-4" viewBox="0 0 20 20" fill="none"><path d="M6 8l4 4 4-4" stroke="#059669" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
             </button>
             {libraryDropdownOpen && (
-              <div className="absolute right-0 top-full z-50 mt-2 min-w-85 max-w-105 w-95 rounded-xl bg-white shadow-lg ring-1 ring-emerald-900/10">
+              <div className="absolute top-full z-50 mt-2 w-50 rounded-xl bg-white shadow-lg ring-1 ring-emerald-900/10">
                 <GlyphLibrary
                   glyphs={glyphs}
                   search={search}
@@ -273,7 +273,7 @@ function EditorHeader({
               <svg className="ml-1 h-4 w-4" viewBox="0 0 20 20" fill="none"><path d="M6 8l4 4 4-4" stroke="#059669" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
             </button>
             {imageDropdownOpen && (
-              <div className="absolute right-0 top-full z-50 mt-2 min-w-50 rounded-xl bg-white shadow-lg ring-1 ring-emerald-900/10 overflow-auto max-h-96">
+              <div className="absolute top-full z-50 mt-2 min-w-50 rounded-xl bg-white shadow-lg ring-1 ring-emerald-900/10 overflow-auto max-h-96">
                 <ul className="py-2">
                   <li className="px-4 py-2 text-xs text-stone-600">
                     {imageEditingEnabled ? 'Image editing and color operations.' : 'Select an imported image to enable.'}
