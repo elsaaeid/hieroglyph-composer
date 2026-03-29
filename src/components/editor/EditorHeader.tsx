@@ -273,7 +273,7 @@ function EditorHeader({
               <svg className="ml-1 h-4 w-4" viewBox="0 0 20 20" fill="none"><path d="M6 8l4 4 4-4" stroke="#059669" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
             </button>
             {imageDropdownOpen && (
-              <div className="absolute right-0 top-full z-50 mt-2 min-w-50 rounded-xl bg-white shadow-lg ring-1 ring-emerald-900/10">
+              <div className="absolute right-0 top-full z-50 mt-2 min-w-50 rounded-xl bg-white shadow-lg ring-1 ring-emerald-900/10 overflow-auto max-h-96">
                 <ul className="py-2">
                   <li className="px-4 py-2 text-xs text-stone-600">
                     {imageEditingEnabled ? 'Image editing and color operations.' : 'Select an imported image to enable.'}
@@ -339,7 +339,7 @@ function EditorHeader({
               </div>
             )}
           </div>
-                    {/* Edit Dropdown */}
+          {/* Edit Dropdown */}
           <div className="relative" ref={editDropdownRef}>
             <button
               className="header-button flex items-center gap-2 rounded-full bg-emerald-100 px-4 py-2 text-sm font-semibold text-emerald-900 shadow transition hover:-translate-y-0.5 hover:shadow-[0_10px_20px_rgba(29,59,47,0.08)]"
