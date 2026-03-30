@@ -557,15 +557,27 @@ function EditorCanvas({
           const glyph = glyphMap.get(item.instance.glyphId)
           if (!glyph) return null
           const isPrimary = selectedItem?.instance.id === item.instance.id
-          // Restore full transform so SVG actions work
-          // Use translate only for glyphs with letter-starting IDs, otherwise use full transform
-          let transform: string;
-          const glyphIdStr = String(glyph.id);
-          if (/^[a-zA-Z]/.test(glyphIdStr)) {
-            transform = `translate(${item.x}, ${item.y})`;
-          } else {
-            transform = buildTransform(item, glyph, cellStep);
+          // Debug: log all glyph properties and transform for diagnosis
+          const buildTransformValue = buildTransform(item, glyph, cellStep);
+          const translateOnlyValue = `translate(${item.x}, ${item.y})`;
+          // Log both transforms and glyph properties for letter-ID SVGs
+          if (/^[a-zA-Z]/.test(String(glyph.id))) {
+            console.log('GLYPH DEBUG', {
+              id: glyph.id,
+              viewBox: glyph.viewBox,
+              width: glyph.width,
+              height: glyph.height,
+              contentMinX: glyph.contentMinX,
+              contentMinY: glyph.contentMinY,
+              contentWidth: glyph.contentWidth,
+              contentHeight: glyph.contentHeight,
+              buildTransform: buildTransformValue,
+              translateOnly: translateOnlyValue,
+              item,
+            });
           }
+          // Use buildTransform for all glyphs (for editability)
+          const transform = buildTransformValue;
           // Debug: log transform and glyph info for artboard rendering
           // console.log('ARTBOARD GLYPH', {
           //   id: item.instance.glyphId,

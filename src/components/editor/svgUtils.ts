@@ -93,8 +93,11 @@ export function buildTransform(item: LayoutItem, glyph: GlyphDef, cellStep: numb
   const svgCenterX = glyph.viewBoxMinX + glyph.width / 2
   const svgCenterY = glyph.viewBoxMinY + glyph.height / 2
 
-  // Scaling factor to fit glyph into the standard cell size
-  const fitScale = QUADRAT / Math.max(glyph.width, glyph.height)
+  // Scaling factor to fit glyph into the standard cell size, clamped to avoid extreme scaling
+  let fitScale = QUADRAT / Math.max(glyph.width, glyph.height)
+  // Clamp fitScale to a visually reasonable range (e.g., 0.1 to 2)
+  if (!Number.isFinite(fitScale) || fitScale < 0.1) fitScale = 0.1;
+  if (fitScale > 2) fitScale = 2;
 
   // User-applied transforms
   const flipX = item.instance.flipX ? -1 : 1
