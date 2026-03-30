@@ -597,7 +597,7 @@ function EditorCanvas({
           // Debug: log all <use> hrefs
           window._glyphUseHrefs = window._glyphUseHrefs || [];
           window._glyphUseHrefs.push(`#${safeId}`);
-            console.log('USE:', `#${safeId}`);
+            // console.log('USE:', `#${safeId}`);
           // After rendering, print both lists for comparison
           // if (window._glyphSymbolIds && window._glyphUseHrefs && window._glyphUseHrefs.length === renderLayout.length) {
           //   console.log('ALL SYMBOL IDS:', window._glyphSymbolIds);

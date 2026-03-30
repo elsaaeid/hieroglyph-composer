@@ -95,9 +95,12 @@ export function buildTransform(item: LayoutItem, glyph: GlyphDef, cellStep: numb
 
   // Scaling factor to fit glyph into the standard cell size, clamped to avoid extreme scaling
   let fitScale = QUADRAT / Math.max(glyph.width, glyph.height)
-  // Clamp fitScale to a visually reasonable range (e.g., 0.1 to 2)
-  if (!Number.isFinite(fitScale) || fitScale < 0.1) fitScale = 0.1;
-  if (fitScale > 2) fitScale = 2;
+  // If the glyph is extremely small, don't scale up excessively—just use fitScale = 1
+  if (Math.max(glyph.width, glyph.height) < QUADRAT / 10) {
+    fitScale = 1;
+  } else if (!Number.isFinite(fitScale) || fitScale < 0.1) {
+    fitScale = 1;
+  }
 
   // User-applied transforms
   const flipX = item.instance.flipX ? -1 : 1
