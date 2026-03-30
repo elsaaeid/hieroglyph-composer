@@ -1,8 +1,14 @@
+// Extend the Window interface to allow debug arrays
+declare global {
+  interface Window {
+    _glyphSymbolIds?: any[];
+    _glyphUseHrefs?: any[];
+  }
+}
 import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { PointerEvent } from 'react'
 import type { GlyphDef, LayoutItem } from './types'
 import { QUADRAT } from './glyphData'
-import { buildTransform } from './svgUtils'
 
 type EditorCanvasProps = {
   layout: LayoutItem[]
@@ -488,13 +494,17 @@ function EditorCanvas({
           {glyphs.map((glyph) => {
             // Normalize id: always use 'glyph-' prefix and replace any non-alphanumeric with underscore
             const safeId = `glyph-${String(glyph.id).replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+            // Remove xmlns attribute from glyph body to avoid rendering issues
+            const cleanBody = glyph.body ? glyph.body.replace(/xmlns="[^"]*"/g, "") : "";
             // Debug: log all generated symbol ids and body content
-            // console.log('SYMBOL:', safeId, 'viewBox:', glyph.viewBox, 'body:', glyph.body);
+            window._glyphSymbolIds = window._glyphSymbolIds || [];
+            window._glyphSymbolIds.push(safeId);
+            console.log('SYMBOL:', safeId, 'viewBox:', glyph.viewBox, 'body:', glyph.body);
             return (
               <symbol key={safeId} id={safeId} viewBox={glyph.viewBox}>
                 {/* Debug rectangle to visualize symbol bounds */}
                 <rect x={0} y={0} width={glyph.width} height={glyph.height} fill="none" stroke="#f00" strokeWidth={1} />
-                <g dangerouslySetInnerHTML={{ __html: glyph.body }} />
+                <g dangerouslySetInnerHTML={{ __html: cleanBody }} />
               </symbol>
             );
           })}
@@ -546,11 +556,33 @@ function EditorCanvas({
           const glyph = glyphMap.get(item.instance.glyphId)
           if (!glyph) return null
           const isPrimary = selectedItem?.instance.id === item.instance.id
-          const transform = buildTransform(item, glyph, cellStep)
+          // TEMP: Use only translate for transform to debug scaling issue
+          const transform = `translate(${item.x}, ${item.y})`
+          // Debug: log transform and glyph info for artboard rendering
+          console.log('ARTBOARD GLYPH', {
+            id: item.instance.glyphId,
+            transform,
+            x: item.x,
+            y: item.y,
+            width: glyph.width,
+            height: glyph.height,
+            viewBox: glyph.viewBox,
+            cellStep,
+            fitScale: glyph ? (QUADRAT / Math.max(glyph.width, glyph.height)) : 1,
+            scaleX: item.instance.scaleX ?? item.instance.scale,
+            scaleY: item.instance.scaleY ?? item.instance.scale,
+          });
           // Normalize id for use reference
           const safeId = `glyph-${String(glyph.id).replace(/[^a-zA-Z0-9_-]/g, '_')}`;
           // Debug: log all <use> hrefs
+          window._glyphUseHrefs = window._glyphUseHrefs || [];
+          window._glyphUseHrefs.push(`#${safeId}`);
           console.log('USE:', `#${safeId}`);
+          // After rendering, print both lists for comparison
+          if (window._glyphSymbolIds && window._glyphUseHrefs && window._glyphUseHrefs.length === renderLayout.length) {
+            console.log('ALL SYMBOL IDS:', window._glyphSymbolIds);
+            console.log('ALL USE HREFS:', window._glyphUseHrefs);
+          }
           return (
             <g
               key={item.instance.id}
@@ -661,7 +693,7 @@ function EditorCanvas({
                 svgRef.current?.setPointerCapture(event.pointerId)
               }}
             >
-              <use href={`#glyph-${glyph.id}`} />
+              <use href={`#${safeId}`} />
               {/* Debug: blue rectangle overlay for every glyph instance */}
               <rect
                 x={0}
