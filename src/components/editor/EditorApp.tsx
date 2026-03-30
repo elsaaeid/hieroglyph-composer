@@ -1620,7 +1620,15 @@ function EditorApp() {
 
     const dataUrl = await new Promise<string>((resolve, reject) => {
       const reader = new FileReader()
-      reader.onload = () => resolve(String(reader.result ?? ''))
+      reader.onload = () => {
+        const result = String(reader.result ?? '')
+        // Validate data URL
+        if (!result.startsWith('data:image/')) {
+          reject(new Error(`Invalid image data URL for file: ${file.name}`))
+        } else {
+          resolve(result)
+        }
+      }
       reader.onerror = () => reject(new Error(`Failed to read image: ${file.name}`))
       reader.readAsDataURL(file)
     })
@@ -1698,7 +1706,14 @@ function EditorApp() {
     try {
       const image = await new Promise<HTMLImageElement>((resolve, reject) => {
         const img = new Image()
-        img.onload = () => resolve(img)
+        img.onload = () => {
+          // Extra check: ensure image has content
+          if (img.naturalWidth === 0 || img.naturalHeight === 0) {
+            reject(new Error('SVG rendered image is empty (zero size).'))
+          } else {
+            resolve(img)
+          }
+        }
         img.onerror = () => reject(new Error('Failed to render SVG for raster export'))
         img.src = svgUrl
       })
@@ -1727,6 +1742,11 @@ function EditorApp() {
         throw new Error(`Failed to create ${format.toUpperCase()} blob`)
       }
       return blob
+    } catch (err) {
+      // Show error in status/toast if available
+      if (typeof setStatus === 'function') setStatus(String(err))
+      if (typeof showToast === 'function') showToast(String(err))
+      throw err
     } finally {
       URL.revokeObjectURL(svgUrl)
     }
