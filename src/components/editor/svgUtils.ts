@@ -455,22 +455,50 @@ export function parseSvgMarkup(svgMarkup: string, id: string): GlyphDef | null {
   const svg = doc.querySelector('svg')
   if (!svg) return null
 
-  const viewBox = svg.getAttribute('viewBox')
-  const viewBoxParts = viewBox ? viewBox.split(/\s+/).map(Number) : []
-  const rawWidth = svg.getAttribute('width')
-  const rawHeight = svg.getAttribute('height')
-  const minX = viewBoxParts.length === 4 ? viewBoxParts[0] : 0
-  const minY = viewBoxParts.length === 4 ? viewBoxParts[1] : 0
-  const width = viewBoxParts.length === 4 ? viewBoxParts[2] : parseNumber(rawWidth) || QUADRAT
-  const height = viewBoxParts.length === 4 ? viewBoxParts[3] : parseNumber(rawHeight) || QUADRAT
-  const safeViewBox = normalizeViewBox(viewBox, minX, minY, width, height)
-  svg.setAttribute('viewBox', safeViewBox)
-  const contentBox = measureSvgContent(svg)
+  let viewBox = svg.getAttribute('viewBox')
+  let viewBoxParts = viewBox ? viewBox.split(/\s+/).map(Number) : []
+  let rawWidth = svg.getAttribute('width')
+  let rawHeight = svg.getAttribute('height')
+  let minX = viewBoxParts.length === 4 ? viewBoxParts[0] : 0
+  let minY = viewBoxParts.length === 4 ? viewBoxParts[1] : 0
+  let width = viewBoxParts.length === 4 ? viewBoxParts[2] : parseNumber(rawWidth) || 0
+  let height = viewBoxParts.length === 4 ? viewBoxParts[3] : parseNumber(rawHeight) || 0
+  let contentBox = measureSvgContent(svg)
+
+  // If width/height/viewBox are missing or zero, use bounding box
+  if ((!viewBox || viewBoxParts.length !== 4 || width === 0 || height === 0) && contentBox) {
+    minX = contentBox.minX
+    minY = contentBox.minY
+    width = contentBox.width
+    height = contentBox.height
+    viewBox = `${minX} ${minY} ${width} ${height}`
+    svg.setAttribute('viewBox', viewBox)
+    viewBoxParts = [minX, minY, width, height]
+  } else {
+    const safeViewBox = normalizeViewBox(viewBox, minX, minY, width || QUADRAT, height || QUADRAT)
+    svg.setAttribute('viewBox', safeViewBox)
+    viewBox = safeViewBox
+  }
+
+  // Warn if SVG is empty or invisible
+  if (!contentBox || contentBox.width === 0 || contentBox.height === 0) {
+    if (typeof window !== 'undefined' && window.alert) {
+      window.alert('Warning: Imported SVG appears empty or invisible.')
+    }
+    // Optionally, return null to skip empty SVGs
+    // return null
+  }
+
+  // Auto-center and fit SVG content to (0,0) by wrapping in a <g> with a transform
+  let body = svg.innerHTML
+  if (contentBox && (contentBox.minX !== 0 || contentBox.minY !== 0)) {
+    body = `<g transform="translate(${-contentBox.minX},${-contentBox.minY})">${svg.innerHTML}</g>`
+  }
 
   return {
     id,
     name: 'Imported SVG',
-    viewBox: safeViewBox,
+    viewBox: viewBox,
     viewBoxMinX: minX,
     viewBoxMinY: minY,
     contentMinX: contentBox?.minX ?? minX,
@@ -479,7 +507,7 @@ export function parseSvgMarkup(svgMarkup: string, id: string): GlyphDef | null {
     contentHeight: contentBox?.height ?? height,
     width: width || QUADRAT,
     height: height || QUADRAT,
-    body: svg.innerHTML,
+    body,
     source: 'imported',
   }
 }

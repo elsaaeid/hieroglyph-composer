@@ -485,11 +485,19 @@ function EditorCanvas({
           />
         )}
         <defs>
-          {glyphs.map((glyph) => (
-            <symbol key={glyph.id} id={`glyph-${glyph.id}`} viewBox={glyph.viewBox}>
-              <g dangerouslySetInnerHTML={{ __html: glyph.body }} />
-            </symbol>
-          ))}
+          {glyphs.map((glyph) => {
+            // Normalize id: always use 'glyph-' prefix and replace any non-alphanumeric with underscore
+            const safeId = `glyph-${String(glyph.id).replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+            // Debug: log all generated symbol ids and body content
+            console.log('SYMBOL:', safeId, 'viewBox:', glyph.viewBox, 'body:', glyph.body);
+            return (
+              <symbol key={safeId} id={safeId} viewBox={glyph.viewBox}>
+                {/* Debug rectangle to visualize symbol bounds */}
+                <rect x={0} y={0} width={glyph.width} height={glyph.height} fill="none" stroke="#f00" strokeWidth={1} />
+                <g dangerouslySetInnerHTML={{ __html: glyph.body }} />
+              </symbol>
+            );
+          })}
           {imageFilterSpecs.map((spec) => {
             const exposureFactor = Math.pow(2, spec.exposure)
             const slope = spec.brightness * spec.contrast * exposureFactor
@@ -539,6 +547,10 @@ function EditorCanvas({
           if (!glyph) return null
           const isPrimary = selectedItem?.instance.id === item.instance.id
           const transform = buildTransform(item, glyph, cellStep)
+          // Normalize id for use reference
+          const safeId = `glyph-${String(glyph.id).replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+          // Debug: log all <use> hrefs
+          console.log('USE:', `#${safeId}`);
           return (
             <g
               key={item.instance.id}
@@ -650,6 +662,18 @@ function EditorCanvas({
               }}
             >
               <use href={`#glyph-${glyph.id}`} />
+              {/* Debug: blue rectangle overlay for every glyph instance */}
+              <rect
+                x={0}
+                y={0}
+                width={glyph.width}
+                height={glyph.height}
+                fill="none"
+                stroke="#2196f3"
+                strokeWidth={1.5}
+                pointerEvents="none"
+                style={{ mixBlendMode: 'multiply' }}
+              />
               {selectedIds.includes(item.instance.id) &&
                 (item.instance.magicSelectionSeeds ??
                   (item.instance.magicSelectionSeed ? [item.instance.magicSelectionSeed] : [])).map(

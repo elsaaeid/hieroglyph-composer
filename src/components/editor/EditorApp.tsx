@@ -1608,9 +1608,11 @@ function EditorApp() {
   }
 
   const importImageFile = async (file: File): Promise<GlyphDef | null> => {
+
     if (file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg')) {
       const text = await file.text()
-      const parsed = parseSvgMarkup(text, `IMPORTED_${Date.now()}_${Math.random().toString(16).slice(2)}`)
+      const id = `IMPORTED_${Date.now()}_${Math.random().toString(16).slice(2)}`
+      const parsed = parseSvgMarkup(text, id)
       return parsed
     }
 
