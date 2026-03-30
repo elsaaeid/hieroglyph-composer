@@ -235,7 +235,7 @@ function LayerPanel({
         <div
           ref={menuRef}
           className="fixed z-50 w-44 rounded-xl border border-emerald-900/20 bg-white p-1 shadow-[0_16px_32px_rgba(27,26,23,0.2)]"
-          style={{ left: contextMenu.x, top: contextMenu.y }}
+          style={{ right: "10px", top: contextMenu.y }}
         >
           <button className="w-full rounded-lg px-3 py-2 text-left text-xs text-emerald-950 hover:bg-emerald-50" onClick={() => runMenuAction(() => onLayerSelectOnly(contextMenu.id))} type="button">Select Only</button>
           <button className="w-full rounded-lg px-3 py-2 text-left text-xs text-emerald-950 hover:bg-emerald-50" onClick={() => runMenuAction(() => onLayerBringToFront(contextMenu.id))} type="button">Bring To Top</button>
