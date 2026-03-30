@@ -95,12 +95,9 @@ export function buildTransform(item: LayoutItem, glyph: GlyphDef, cellStep: numb
 
   // Scaling factor to fit glyph into the standard cell size, clamped to avoid extreme scaling
   let fitScale = QUADRAT / Math.max(glyph.width, glyph.height)
-  // If the glyph is extremely small, don't scale up excessively—just use fitScale = 1
-  if (Math.max(glyph.width, glyph.height) < QUADRAT / 10) {
-    fitScale = 1;
-  } else if (!Number.isFinite(fitScale) || fitScale < 0.1) {
-    fitScale = 1;
-  }
+  // Clamp fitScale to a visually reasonable range (e.g., 0.1 to 2)
+  if (!Number.isFinite(fitScale) || fitScale < 0.1) fitScale = 0.1;
+  if (fitScale > 2) fitScale = 2;
 
   // User-applied transforms
   const flipX = item.instance.flipX ? -1 : 1
@@ -236,23 +233,52 @@ export function buildExportSvg(
     .filter(Boolean)
     .join('')
 
+  let customViewBox = null;
+  let singleLetterGlyph = null;
+  let customWidth = width;
+  let customHeight = height;
+  if (layoutByLayer.length === 1) {
+    const glyph = glyphMap.get(layoutByLayer[0].instance.glyphId);
+    if (glyph && /^[a-zA-Z]/.test(String(glyph.id))) {
+      singleLetterGlyph = glyph;
+      // Match artboard: export at cellStep x cellStep, scale and center glyph
+      customWidth = cellStep;
+      customHeight = cellStep;
+      customViewBox = `0 0 ${cellStep} ${cellStep}`;
+    }
+  }
+
   const body = layoutByLayer
     .map((item) => {
       const glyph = glyphMap.get(item.instance.glyphId)
       if (!glyph) return ''
+      let normalizedBody = ensureImageHrefCompatibility(glyph.body);
+      // For single letter-ID glyph, scale and center to fit cellStep (like artboard)
+      if (singleLetterGlyph && glyph.id === singleLetterGlyph.id) {
+        // Compute fitScale and center
+        const fitScale = cellStep / Math.max(glyph.width, glyph.height);
+        const centerX = cellStep / 2;
+        const centerY = cellStep / 2;
+        const svgCenterX = glyph.viewBoxMinX + glyph.width / 2;
+        const svgCenterY = glyph.viewBoxMinY + glyph.height / 2;
+        return `
+          <g transform="translate(${centerX},${centerY}) scale(${fitScale}) translate(${-svgCenterX},${-svgCenterY})">
+            ${normalizedBody}
+          </g>
+        `.trim();
+      }
       const exportItem: LayoutItem = {
         ...item,
         x: item.x - minX + exportPadding,
         y: item.y - minY + exportPadding,
       }
-      const transform = buildTransform(exportItem, glyph, cellStep)
-      const normalizedBody = ensureImageHrefCompatibility(glyph.body)
+      let transform: string = buildTransform(exportItem, glyph, cellStep);
       const filterId = `img-filter-${item.instance.id}`
       const hasFilter = filterDefs.includes(`id="${filterId}"`)
       return `
         <g
           transform="${transform}"
-          ${hasFilter ? `filter="url(#${filterId})"` : ''}
+          ${hasFilter ? `filter=\"url(#${filterId})\"` : ''}
         >
           ${normalizedBody}
         </g>
@@ -264,9 +290,9 @@ export function buildExportSvg(
     <svg
       xmlns="http://www.w3.org/2000/svg"
       xmlns:xlink="http://www.w3.org/1999/xlink"
-      viewBox="0 0 ${width} ${height}"
-      width="${width * exportScale}"
-      height="${height * exportScale}"
+      viewBox="${customViewBox ? customViewBox : `0 0 ${width} ${height}`}"
+      width="${customWidth * exportScale}"
+      height="${customHeight * exportScale}"
     >
       ${filterDefs ? `<defs>${filterDefs}</defs>` : ''}
       ${body}
