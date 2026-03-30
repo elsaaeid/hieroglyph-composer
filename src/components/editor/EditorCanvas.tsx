@@ -6,6 +6,7 @@ declare global {
   }
 }
 import { useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { buildTransform } from './svgUtils'
 import type { PointerEvent } from 'react'
 import type { GlyphDef, LayoutItem } from './types'
 import { QUADRAT } from './glyphData'
@@ -556,8 +557,15 @@ function EditorCanvas({
           const glyph = glyphMap.get(item.instance.glyphId)
           if (!glyph) return null
           const isPrimary = selectedItem?.instance.id === item.instance.id
-          // TEMP: Use only translate for transform to debug scaling issue
-          const transform = `translate(${item.x}, ${item.y})`
+          // Restore full transform so SVG actions work
+          // Use translate only for glyphs with letter-starting IDs, otherwise use full transform
+          let transform: string;
+          const glyphIdStr = String(glyph.id);
+          if (/^[a-zA-Z]/.test(glyphIdStr)) {
+            transform = `translate(${item.x}, ${item.y})`;
+          } else {
+            transform = buildTransform(item, glyph, cellStep);
+          }
           // Debug: log transform and glyph info for artboard rendering
           // console.log('ARTBOARD GLYPH', {
           //   id: item.instance.glyphId,
