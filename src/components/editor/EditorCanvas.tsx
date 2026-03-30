@@ -489,7 +489,7 @@ function EditorCanvas({
             // Normalize id: always use 'glyph-' prefix and replace any non-alphanumeric with underscore
             const safeId = `glyph-${String(glyph.id).replace(/[^a-zA-Z0-9_-]/g, '_')}`;
             // Debug: log all generated symbol ids and body content
-            console.log('SYMBOL:', safeId, 'viewBox:', glyph.viewBox, 'body:', glyph.body);
+            // console.log('SYMBOL:', safeId, 'viewBox:', glyph.viewBox, 'body:', glyph.body);
             return (
               <symbol key={safeId} id={safeId} viewBox={glyph.viewBox}>
                 {/* Debug rectangle to visualize symbol bounds */}
