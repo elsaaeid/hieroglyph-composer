@@ -559,23 +559,23 @@ function EditorCanvas({
           const isPrimary = selectedItem?.instance.id === item.instance.id
           // Debug: log all glyph properties and transform for diagnosis
           const buildTransformValue = buildTransform(item, glyph, cellStep);
-          const translateOnlyValue = `translate(${item.x}, ${item.y})`;
+          // const translateOnlyValue = `translate(${item.x}, ${item.y})`;
           // Log both transforms and glyph properties for letter-ID SVGs
-          if (/^[a-zA-Z]/.test(String(glyph.id))) {
-            console.log('GLYPH DEBUG', {
-              id: glyph.id,
-              viewBox: glyph.viewBox,
-              width: glyph.width,
-              height: glyph.height,
-              contentMinX: glyph.contentMinX,
-              contentMinY: glyph.contentMinY,
-              contentWidth: glyph.contentWidth,
-              contentHeight: glyph.contentHeight,
-              buildTransform: buildTransformValue,
-              translateOnly: translateOnlyValue,
-              item,
-            });
-          }
+          // if (/^[a-zA-Z]/.test(String(glyph.id))) {
+          //   console.log('GLYPH DEBUG', {
+          //     id: glyph.id,
+          //     viewBox: glyph.viewBox,
+          //     width: glyph.width,
+          //     height: glyph.height,
+          //     contentMinX: glyph.contentMinX,
+          //     contentMinY: glyph.contentMinY,
+          //     contentWidth: glyph.contentWidth,
+          //     contentHeight: glyph.contentHeight,
+          //     buildTransform: buildTransformValue,
+          //     translateOnly: translateOnlyValue,
+          //     item,
+          //   });
+          // }
           // Use buildTransform for all glyphs (for editability)
           const transform = buildTransformValue;
           // Debug: log transform and glyph info for artboard rendering
