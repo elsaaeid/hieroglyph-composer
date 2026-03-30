@@ -499,7 +499,7 @@ function EditorCanvas({
             // Debug: log all generated symbol ids and body content
             window._glyphSymbolIds = window._glyphSymbolIds || [];
             window._glyphSymbolIds.push(safeId);
-            console.log('SYMBOL:', safeId, 'viewBox:', glyph.viewBox, 'body:', glyph.body);
+            // console.log('SYMBOL:', safeId, 'viewBox:', glyph.viewBox, 'body:', glyph.body);
             return (
               <symbol key={safeId} id={safeId} viewBox={glyph.viewBox}>
                 {/* Debug rectangle to visualize symbol bounds */}
@@ -559,30 +559,30 @@ function EditorCanvas({
           // TEMP: Use only translate for transform to debug scaling issue
           const transform = `translate(${item.x}, ${item.y})`
           // Debug: log transform and glyph info for artboard rendering
-          console.log('ARTBOARD GLYPH', {
-            id: item.instance.glyphId,
-            transform,
-            x: item.x,
-            y: item.y,
-            width: glyph.width,
-            height: glyph.height,
-            viewBox: glyph.viewBox,
-            cellStep,
-            fitScale: glyph ? (QUADRAT / Math.max(glyph.width, glyph.height)) : 1,
-            scaleX: item.instance.scaleX ?? item.instance.scale,
-            scaleY: item.instance.scaleY ?? item.instance.scale,
-          });
+          // console.log('ARTBOARD GLYPH', {
+          //   id: item.instance.glyphId,
+          //   transform,
+          //   x: item.x,
+          //   y: item.y,
+          //   width: glyph.width,
+          //   height: glyph.height,
+          //   viewBox: glyph.viewBox,
+          //   cellStep,
+          //   fitScale: glyph ? (QUADRAT / Math.max(glyph.width, glyph.height)) : 1,
+          //   scaleX: item.instance.scaleX ?? item.instance.scale,
+          //   scaleY: item.instance.scaleY ?? item.instance.scale,
+          // });
           // Normalize id for use reference
           const safeId = `glyph-${String(glyph.id).replace(/[^a-zA-Z0-9_-]/g, '_')}`;
           // Debug: log all <use> hrefs
           window._glyphUseHrefs = window._glyphUseHrefs || [];
           window._glyphUseHrefs.push(`#${safeId}`);
-          console.log('USE:', `#${safeId}`);
+            console.log('USE:', `#${safeId}`);
           // After rendering, print both lists for comparison
-          if (window._glyphSymbolIds && window._glyphUseHrefs && window._glyphUseHrefs.length === renderLayout.length) {
-            console.log('ALL SYMBOL IDS:', window._glyphSymbolIds);
-            console.log('ALL USE HREFS:', window._glyphUseHrefs);
-          }
+          // if (window._glyphSymbolIds && window._glyphUseHrefs && window._glyphUseHrefs.length === renderLayout.length) {
+          //   console.log('ALL SYMBOL IDS:', window._glyphSymbolIds);
+          //   console.log('ALL USE HREFS:', window._glyphUseHrefs);
+          // }
           return (
             <g
               key={item.instance.id}
