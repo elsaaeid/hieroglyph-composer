@@ -31,7 +31,7 @@ function EditorApp() {
   const [rows, setRows] = useState<GlyphInstance[][]>([[]])
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [search, setSearch] = useState('')
-  const [zoom, setZoom] = useState(0.3)
+  const [zoom, setZoom] = useState(0.34)
   const [status, setStatus] = useState('Ready')
   const [isLoadingGlyphs, setIsLoadingGlyphs] = useState(false)
   const [page, setPage] = useState(1)

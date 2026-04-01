@@ -145,6 +145,15 @@ function EditorCanvas({
     centerY: selectedItem ? selectedItem.y + cellStep / 2 + offsetY : 0,
   }
   const activeBounds = selectionBounds ?? fallbackBounds
+  const controlPadding = Math.max(16, cellStep * 0.1) * controlScale
+  const controlBounds: SelectionBounds = {
+    x: activeBounds.x - controlPadding,
+    y: activeBounds.y - controlPadding,
+    width: activeBounds.width + controlPadding * 2,
+    height: activeBounds.height + controlPadding * 2,
+    centerX: activeBounds.centerX,
+    centerY: activeBounds.centerY,
+  }
 
   useLayoutEffect(() => {
     if (!selectedItem || !selectedGroupRef.current || !svgRef.current) {
@@ -585,10 +594,10 @@ function EditorCanvas({
           <g>
             {/* Blue border rectangle around selection */}
             <rect
-              x={activeBounds.x}
-              y={activeBounds.y}
-              width={activeBounds.width}
-              height={activeBounds.height}
+              x={controlBounds.x}
+              y={controlBounds.y}
+              width={controlBounds.width}
+              height={controlBounds.height}
               fill="none"
               stroke="#2563eb"
               strokeWidth={4}
@@ -596,8 +605,8 @@ function EditorCanvas({
             />
             {/* Center circle - calculated from bounds to ensure it's centered */}
             <circle
-              cx={activeBounds.x + activeBounds.width / 2}
-              cy={activeBounds.y + activeBounds.height / 2}
+              cx={controlBounds.x + controlBounds.width / 2}
+              cy={controlBounds.y + controlBounds.height / 2}
               r={Math.max(12, cellStep * 0.12) * controlScale}
               fill="#2196f3"
               stroke="#1565c0"
@@ -606,20 +615,20 @@ function EditorCanvas({
             />
             {/* Center crosshairs */}
             <line
-              x1={activeBounds.x + activeBounds.width / 2 - Math.max(20, cellStep * 0.2) * controlScale}
-              y1={activeBounds.y + activeBounds.height / 2}
-              x2={activeBounds.x + activeBounds.width / 2 + Math.max(20, cellStep * 0.2) * controlScale}
-              y2={activeBounds.y + activeBounds.height / 2}
+              x1={controlBounds.x + controlBounds.width / 2 - Math.max(20, cellStep * 0.2) * controlScale}
+              y1={controlBounds.y + controlBounds.height / 2}
+              x2={controlBounds.x + controlBounds.width / 2 + Math.max(20, cellStep * 0.2) * controlScale}
+              y2={controlBounds.y + controlBounds.height / 2}
               stroke="#2196f3"
               strokeWidth={1.5}
               opacity={0.6}
               pointerEvents="none"
             />
             <line
-              x1={activeBounds.x + activeBounds.width / 2}
-              y1={activeBounds.y + activeBounds.height / 2 - Math.max(20, cellStep * 0.2) * controlScale}
-              x2={activeBounds.x + activeBounds.width / 2}
-              y2={activeBounds.y + activeBounds.height / 2 + Math.max(20, cellStep * 0.2) * controlScale}
+              x1={controlBounds.x + controlBounds.width / 2}
+              y1={controlBounds.y + controlBounds.height / 2 - Math.max(20, cellStep * 0.2) * controlScale}
+              x2={controlBounds.x + controlBounds.width / 2}
+              y2={controlBounds.y + controlBounds.height / 2 + Math.max(20, cellStep * 0.2) * controlScale}
               stroke="#2196f3"
               strokeWidth={1.5}
               opacity={0.6}
@@ -627,10 +636,10 @@ function EditorCanvas({
             />
             {/* Rotation handle with icon */}
             <line
-              x1={activeBounds.x + activeBounds.width / 2}
-              y1={activeBounds.y}
-              x2={activeBounds.x + activeBounds.width / 2}
-              y2={activeBounds.y - Math.max(20, cellStep * 0.2) * controlScale}
+              x1={controlBounds.x + controlBounds.width / 2}
+              y1={controlBounds.y}
+              x2={controlBounds.x + controlBounds.width / 2}
+              y2={controlBounds.y - Math.max(20, cellStep * 0.2) * controlScale}
               stroke="#2563eb"
               strokeWidth={1.5}
               pointerEvents="none"
@@ -641,8 +650,8 @@ function EditorCanvas({
                 event.stopPropagation()
                 const point = handlePoint(event)
                 if (!point) return
-                const centerX = activeBounds.x + activeBounds.width / 2
-                const centerY = activeBounds.y + activeBounds.height / 2
+                const centerX = controlBounds.x + controlBounds.width / 2
+                const centerY = controlBounds.y + controlBounds.height / 2
                 dragRef.current = {
                   mode: 'rotate',
                   lastX: point.x,
@@ -658,16 +667,16 @@ function EditorCanvas({
               }}
             >
               <circle
-                cx={activeBounds.x + activeBounds.width / 2}
-                cy={activeBounds.y - Math.max(20, cellStep * 0.2) * controlScale}
+                cx={controlBounds.x + controlBounds.width / 2}
+                cy={controlBounds.y - Math.max(20, cellStep * 0.2) * controlScale}
                 r={Math.max(11, cellStep * 0.11) * controlScale}
                 fill="#eff6ff"
                 stroke="#2563eb"
                 strokeWidth={2.5}
               />
               <MdOutlineCropRotate
-                x={activeBounds.x + activeBounds.width / 2 - Math.max(8, cellStep * 0.08) * controlScale}
-                y={activeBounds.y - Math.max(20, cellStep * 0.2) * controlScale - Math.max(8, cellStep * 0.08) * controlScale}
+                x={controlBounds.x + controlBounds.width / 2 - Math.max(8, cellStep * 0.08) * controlScale}
+                y={controlBounds.y - Math.max(20, cellStep * 0.2) * controlScale - Math.max(8, cellStep * 0.08) * controlScale}
                 size={60 * controlScale}
                 color="#2563eb"
                 style={{ pointerEvents: 'none' }}
@@ -675,8 +684,8 @@ function EditorCanvas({
             </g>
             {/* Scaling handles at edges - teal/dark cyan color */}
             <circle
-              cx={activeBounds.x + activeBounds.width / 2}
-              cy={activeBounds.y}
+              cx={controlBounds.x + controlBounds.width / 2}
+              cy={controlBounds.y}
               r={Math.max(6, cellStep * 0.06) * controlScale}
               fill="#0f766e"
               stroke="#fff"
@@ -686,8 +695,8 @@ function EditorCanvas({
                 event.stopPropagation()
                 const point = handlePoint(event)
                 if (!point) return
-                const centerX = activeBounds.x + activeBounds.width / 2
-                const centerY = activeBounds.y + activeBounds.height / 2
+                const centerX = controlBounds.x + controlBounds.width / 2
+                const centerY = controlBounds.y + controlBounds.height / 2
                 dragRef.current = {
                   mode: 'scale',
                   lastX: point.x,
@@ -703,8 +712,8 @@ function EditorCanvas({
               }}
             />
             <circle
-              cx={activeBounds.x + activeBounds.width / 2}
-              cy={activeBounds.y + activeBounds.height}
+              cx={controlBounds.x + controlBounds.width / 2}
+              cy={controlBounds.y + controlBounds.height}
               r={Math.max(6, cellStep * 0.06) * controlScale}
               fill="#0f766e"
               stroke="#fff"
@@ -714,8 +723,8 @@ function EditorCanvas({
                 event.stopPropagation()
                 const point = handlePoint(event)
                 if (!point) return
-                const centerX = activeBounds.x + activeBounds.width / 2
-                const centerY = activeBounds.y + activeBounds.height / 2
+                const centerX = controlBounds.x + controlBounds.width / 2
+                const centerY = controlBounds.y + controlBounds.height / 2
                 dragRef.current = {
                   mode: 'scale',
                   lastX: point.x,
@@ -731,8 +740,8 @@ function EditorCanvas({
               }}
             />
             <circle
-              cx={activeBounds.x}
-              cy={activeBounds.y + activeBounds.height / 2}
+              cx={controlBounds.x}
+              cy={controlBounds.y + controlBounds.height / 2}
               r={Math.max(6, cellStep * 0.06) * controlScale}
               fill="#0f766e"
               stroke="#fff"
@@ -742,8 +751,8 @@ function EditorCanvas({
                 event.stopPropagation()
                 const point = handlePoint(event)
                 if (!point) return
-                const centerX = activeBounds.x + activeBounds.width / 2
-                const centerY = activeBounds.y + activeBounds.height / 2
+                const centerX = controlBounds.x + controlBounds.width / 2
+                const centerY = controlBounds.y + controlBounds.height / 2
                 dragRef.current = {
                   mode: 'scale',
                   lastX: point.x,
@@ -759,8 +768,8 @@ function EditorCanvas({
               }}
             />
             <circle
-              cx={activeBounds.x + activeBounds.width}
-              cy={activeBounds.y + activeBounds.height / 2}
+              cx={controlBounds.x + controlBounds.width}
+              cy={controlBounds.y + controlBounds.height / 2}
               r={Math.max(6, cellStep * 0.06) * controlScale}
               fill="#0f766e"
               stroke="#fff"
@@ -770,8 +779,8 @@ function EditorCanvas({
                 event.stopPropagation()
                 const point = handlePoint(event)
                 if (!point) return
-                const centerX = activeBounds.x + activeBounds.width / 2
-                const centerY = activeBounds.y + activeBounds.height / 2
+                const centerX = controlBounds.x + controlBounds.width / 2
+                const centerY = controlBounds.y + controlBounds.height / 2
                 dragRef.current = {
                   mode: 'scale',
                   lastX: point.x,
