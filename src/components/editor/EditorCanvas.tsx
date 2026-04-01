@@ -497,15 +497,15 @@ function EditorCanvas({
         {/* Center point and border visualization */}
         {selectedItem && activeBounds && (
           <g>
-            {/* Red border rectangle around selection */}
+            {/* Blue border rectangle around selection */}
             <rect
               x={activeBounds.x}
               y={activeBounds.y}
               width={activeBounds.width}
               height={activeBounds.height}
               fill="none"
-              stroke="#f00"
-              strokeWidth={3}
+              stroke="#2563eb"
+              strokeWidth={4}
               pointerEvents="none"
             />
             {/* Center circle - calculated from bounds to ensure it's centered */}
@@ -545,7 +545,7 @@ function EditorCanvas({
               y1={activeBounds.y}
               x2={activeBounds.x + activeBounds.width / 2}
               y2={activeBounds.y - Math.max(20, cellStep * 0.2)}
-              stroke="#dc2626"
+              stroke="#2563eb"
               strokeWidth={1.5}
               pointerEvents="none"
             />
@@ -574,31 +574,18 @@ function EditorCanvas({
               <circle
                 cx={activeBounds.x + activeBounds.width / 2}
                 cy={activeBounds.y - Math.max(20, cellStep * 0.2)}
-                r={Math.max(9, cellStep * 0.09)}
-                fill="#ffffff"
-                stroke="#dc2626"
-                strokeWidth={2}
+                r={Math.max(11, cellStep * 0.11)}
+                fill="#eff6ff"
+                stroke="#2563eb"
+                strokeWidth={2.5}
               />
-              <foreignObject
+              <MdOutlineCropRotate
                 x={activeBounds.x + activeBounds.width / 2 - Math.max(8, cellStep * 0.08)}
                 y={activeBounds.y - Math.max(20, cellStep * 0.2) - Math.max(8, cellStep * 0.08)}
-                width={Math.max(16, cellStep * 0.16)}
-                height={Math.max(16, cellStep * 0.16)}
-                pointerEvents="none"
-              >
-                <div
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#dc2626',
-                  }}
-                >
-                  <MdOutlineCropRotate size={Math.max(14, cellStep * 0.14)} />
-                </div>
-              </foreignObject>
+                size={Math.max(40, cellStep * 0.18)}
+                color="#2563eb"
+                style={{ pointerEvents: 'none' }}
+              />
             </g>
             {/* Scaling handles at edges - teal/dark cyan color */}
             <circle
