@@ -136,7 +136,7 @@ function EditorHeader({
       </div>
       <div className="flex w-full items-center lg:w-auto lg:justify-end">
         {/* Bottom full-width tab row on mobile, normal row on desktop */}
-        <div className="flex w-full overflow-x-auto grid-cols-4 gap-2 lg:flex lg:w-auto lg:flex-row lg:flex-wrap">
+        <div className="flex w-full overflow-x-clip grid-cols-4 gap-2 lg:flex lg:w-auto lg:flex-row lg:flex-wrap">
           {/* File Dropdown (refactored to match Image Dropdown structure) */}
           <div className="relative" ref={dropdownRef}>
             <button
