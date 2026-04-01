@@ -248,7 +248,7 @@ function EditorHeader({
               <MdKeyboardArrowDown size={18} className={`transition-transform ${libraryDropdownOpen ? 'rotate-180' : ''}`} />
             </button>
             {libraryDropdownOpen && (
-              <div className="absolute top-full right-1 z-50 mt-2 w-60 rounded-xl bg-white shadow-lg ring-1 ring-emerald-900/10">
+              <div className="absolute top-full right-20 z-50 mt-2 w-60 rounded-xl bg-white shadow-lg ring-1 ring-emerald-900/10">
                 <GlyphLibrary
                   glyphs={glyphs}
                   search={search}
