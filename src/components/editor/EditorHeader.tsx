@@ -133,13 +133,13 @@ function EditorHeader({
         <p className="header-kicker uppercase tracking-[0.18em] text-stone-500">action-studio</p>
         <h1 className="header-title mt-1 truncate font-[Fraunces] text-base text-emerald-950 sm:text-lg lg:text-xl">Action Composer</h1>
       </div>
-      <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto lg:justify-end">
-        {/* Row for File, Image, Edit, and Library dropdowns */}
-        <div className="flex flex-row flex-wrap gap-2">
+      <div className="flex w-full items-center lg:w-auto lg:justify-end">
+        {/* Bottom full-width tab row on mobile, normal row on desktop */}
+        <div className="grid w-full grid-cols-4 gap-2 lg:flex lg:w-auto lg:flex-row lg:flex-wrap">
           {/* File Dropdown (refactored to match Image Dropdown structure) */}
           <div className="relative" ref={dropdownRef}>
             <button
-              className="header-button flex items-center gap-2 rounded-full bg-emerald-900 px-4 py-2 text-sm font-semibold text-amber-50 shadow transition hover:-translate-y-0.5 hover:shadow-[0_10px_20px_rgba(29,59,47,0.2)]"
+              className="header-button flex w-full items-center justify-center gap-2 rounded-full bg-emerald-900 px-3 py-2 text-sm font-semibold text-amber-50 shadow transition hover:-translate-y-0.5 hover:shadow-[0_10px_20px_rgba(29,59,47,0.2)] lg:w-auto lg:px-4"
               onClick={() => setDropdownOpen((v) => !v)}
               aria-haspopup="true"
               aria-expanded={dropdownOpen}
@@ -238,7 +238,7 @@ function EditorHeader({
           {/* Library Dropdown */}
           <div className="relative" ref={libraryDropdownRef}>
             <button
-              className="header-button flex items-center gap-2 rounded-full bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-900 shadow transition hover:-translate-y-0.5 hover:shadow-[0_10px_20px_rgba(29,59,47,0.08)]"
+              className="header-button flex w-full items-center justify-center gap-2 rounded-full bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-900 shadow transition hover:-translate-y-0.5 hover:shadow-[0_10px_20px_rgba(29,59,47,0.08)] lg:w-auto lg:px-4"
               onClick={() => setLibraryDropdownOpen((v) => !v)}
               aria-haspopup="true"
               aria-expanded={libraryDropdownOpen}
@@ -266,7 +266,7 @@ function EditorHeader({
           {/* Image Dropdown */}
           <div className="relative" ref={imageDropdownRef}>
             <button
-              className="header-button flex items-center gap-2 rounded-full bg-amber-50 px-4 py-2 text-sm font-semibold text-emerald-900 shadow transition hover:-translate-y-0.5 hover:shadow-[0_10px_20px_rgba(29,59,47,0.08)]"
+              className="header-button flex w-full items-center justify-center gap-2 rounded-full bg-amber-50 px-3 py-2 text-sm font-semibold text-emerald-900 shadow transition hover:-translate-y-0.5 hover:shadow-[0_10px_20px_rgba(29,59,47,0.08)] lg:w-auto lg:px-4"
               onClick={() => setImageDropdownOpen((v) => !v)}
               aria-haspopup="true"
               aria-expanded={imageDropdownOpen}
@@ -345,7 +345,7 @@ function EditorHeader({
           {/* Edit Dropdown */}
           <div className="relative" ref={editDropdownRef}>
             <button
-              className="header-button flex items-center gap-2 rounded-full bg-emerald-100 px-4 py-2 text-sm font-semibold text-emerald-900 shadow transition hover:-translate-y-0.5 hover:shadow-[0_10px_20px_rgba(29,59,47,0.08)]"
+              className="header-button flex w-full items-center justify-center gap-2 rounded-full bg-emerald-100 px-3 py-2 text-sm font-semibold text-emerald-900 shadow transition hover:-translate-y-0.5 hover:shadow-[0_10px_20px_rgba(29,59,47,0.08)] lg:w-auto lg:px-4"
               onClick={() => setEditDropdownOpen((v) => !v)}
               aria-haspopup="true"
               aria-expanded={editDropdownOpen}

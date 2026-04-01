@@ -393,6 +393,10 @@ export function buildExportSvg(
             xmlns="http://www.w3.org/2000/svg"
             xmlns:xlink="http://www.w3.org/1999/xlink"
             viewBox="${glyph.viewBox}"
+            width="${glyph.width}"
+            height="${glyph.height}"
+            x="0"
+            y="0"
             overflow="visible"
           >
             ${normalizedBody}
