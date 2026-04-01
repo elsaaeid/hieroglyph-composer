@@ -163,7 +163,7 @@ function EditorToolbar({
           <MdKeyboardArrowDown size={18} className={`transition-transform ${openMenu === 'history' ? 'rotate-180' : ''}`} />
         </button>
         {openMenu === 'history' && (
-          <div className={menuPanelClass}>
+          <div className={menuPanelClass + ' toolbar-button'}>
             <div className="flex gap-2">
               <button
                 className="flex flex-1 items-center justify-center gap-1 rounded-full border border-emerald-900/30 px-3 py-2 text-sm font-semibold text-emerald-900 disabled:cursor-not-allowed disabled:opacity-50"
@@ -191,7 +191,7 @@ function EditorToolbar({
       <div className="relative">
         <button
           type="button"
-          className={menuButtonClass}
+          className={menuButtonClass + ' toolbar-button'}
           onClick={() => setOpenMenu((prev) => (prev === 'selection' ? null : 'selection'))}
           aria-haspopup="true"
           aria-expanded={openMenu === 'selection'}
