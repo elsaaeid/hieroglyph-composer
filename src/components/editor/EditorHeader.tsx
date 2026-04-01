@@ -10,6 +10,7 @@ import ExportIcon from './icons/ExportIcon'
 import ImageIcon from './icons/ImageIcon'
 import * as React from 'react'
 import EditIcon from './icons/EditIcon'
+import { MdKeyboardArrowDown } from 'react-icons/md'
 
 type EditorHeaderProps = {
   onCopy: (preset: CopyPreset) => void
@@ -146,7 +147,7 @@ function EditorHeader({
             >
               <FileIcon width={20} height={20} />
               File
-              <svg className="ml-1 h-4 w-4" viewBox="0 0 20 20" fill="none"><path d="M6 8l4 4 4-4" stroke="#FBBF24" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              <MdKeyboardArrowDown size={18} className={`transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
             </button>
             {dropdownOpen && (
               <div className="absolute top-full z-50 mt-2 min-w-50 rounded-xl bg-white shadow-lg ring-1 ring-emerald-900/10 overflow-auto max-h-96">
@@ -245,7 +246,7 @@ function EditorHeader({
             >
               <LibraryIcon width={20} height={20} />
               Library
-              <svg className="ml-1 h-4 w-4" viewBox="0 0 20 20" fill="none"><path d="M6 8l4 4 4-4" stroke="#059669" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              <MdKeyboardArrowDown size={18} className={`transition-transform ${libraryDropdownOpen ? 'rotate-180' : ''}`} />
             </button>
             {libraryDropdownOpen && (
               <div className="absolute top-full right-1 z-50 mt-2 w-60 rounded-xl bg-white shadow-lg ring-1 ring-emerald-900/10">
@@ -273,7 +274,7 @@ function EditorHeader({
             >
               <ImageIcon width={20} height={20} />
               Image
-              <svg className="ml-1 h-4 w-4" viewBox="0 0 20 20" fill="none"><path d="M6 8l4 4 4-4" stroke="#059669" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              <MdKeyboardArrowDown size={18} className={`transition-transform ${imageDropdownOpen ? 'rotate-180' : ''}`} />
             </button>
             {imageDropdownOpen && (
               <div className="absolute top-full z-50 mt-2 min-w-50 rounded-xl bg-white shadow-lg ring-1 ring-emerald-900/10 overflow-auto max-h-96">
@@ -352,7 +353,7 @@ function EditorHeader({
             >
               <EditIcon width={20} height={20} />
               Edit
-              <svg className="ml-1 h-4 w-4" viewBox="0 0 20 20" fill="none"><path d="M6 8l4 4 4-4" stroke="#059669" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              <MdKeyboardArrowDown size={18} className={`transition-transform ${editDropdownOpen ? 'rotate-180' : ''}`} />
             </button>
             {editDropdownOpen && (
               <div className="absolute right-0 top-full z-50 mt-2 min-w-50 rounded-xl bg-white shadow-lg ring-1 ring-emerald-900/10">
