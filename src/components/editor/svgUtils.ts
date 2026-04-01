@@ -208,8 +208,12 @@ function applyMatrixToPoint(matrix: Matrix2D, x: number, y: number): { x: number
 }
 
 function buildTransformMatrix(item: LayoutItem, glyph: GlyphDef, cellStep: number): Matrix2D {
-  const svgCenterX = glyph.viewBoxMinX + glyph.width / 2
-  const svgCenterY = glyph.viewBoxMinY + glyph.height / 2
+  const bodyMinX = glyph.source === 'imported' ? 0 : (Number.isFinite(glyph.contentMinX) ? glyph.contentMinX : glyph.viewBoxMinX)
+  const bodyMinY = glyph.source === 'imported' ? 0 : (Number.isFinite(glyph.contentMinY) ? glyph.contentMinY : glyph.viewBoxMinY)
+  const bodyWidth = Number.isFinite(glyph.contentWidth) && glyph.contentWidth > 0 ? glyph.contentWidth : glyph.width
+  const bodyHeight = Number.isFinite(glyph.contentHeight) && glyph.contentHeight > 0 ? glyph.contentHeight : glyph.height
+  const svgCenterX = bodyMinX + bodyWidth / 2
+  const svgCenterY = bodyMinY + bodyHeight / 2
 
   let fitScale = QUADRAT / Math.max(glyph.width, glyph.height)
   if (!Number.isFinite(fitScale) || fitScale < 0.1) fitScale = 0.1
@@ -252,12 +256,10 @@ function buildTransformMatrix(item: LayoutItem, glyph: GlyphDef, cellStep: numbe
 
 function getTransformedBounds(item: LayoutItem, glyph: GlyphDef, cellStep: number) {
   const matrix = buildTransformMatrix(item, glyph, cellStep)
-  const sourceMinX = Number.isFinite(glyph.contentMinX) ? glyph.contentMinX : glyph.viewBoxMinX
-  const sourceMinY = Number.isFinite(glyph.contentMinY) ? glyph.contentMinY : glyph.viewBoxMinY
-  const sourceWidth =
-    Number.isFinite(glyph.contentWidth) && glyph.contentWidth > 0 ? glyph.contentWidth : glyph.width
-  const sourceHeight =
-    Number.isFinite(glyph.contentHeight) && glyph.contentHeight > 0 ? glyph.contentHeight : glyph.height
+  const sourceMinX = glyph.source === 'imported' ? 0 : (Number.isFinite(glyph.contentMinX) ? glyph.contentMinX : glyph.viewBoxMinX)
+  const sourceMinY = glyph.source === 'imported' ? 0 : (Number.isFinite(glyph.contentMinY) ? glyph.contentMinY : glyph.viewBoxMinY)
+  const sourceWidth = Number.isFinite(glyph.contentWidth) && glyph.contentWidth > 0 ? glyph.contentWidth : glyph.width
+  const sourceHeight = Number.isFinite(glyph.contentHeight) && glyph.contentHeight > 0 ? glyph.contentHeight : glyph.height
   const corners = [
     applyMatrixToPoint(matrix, sourceMinX, sourceMinY),
     applyMatrixToPoint(matrix, sourceMinX + sourceWidth, sourceMinY),
@@ -387,7 +389,14 @@ export function buildExportSvg(
           transform="${transform}"
           ${hasFilter ? `filter=\"url(#${filterId})\"` : ''}
         >
-          ${normalizedBody}
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            xmlns:xlink="http://www.w3.org/1999/xlink"
+            viewBox="${glyph.viewBox}"
+            overflow="visible"
+          >
+            ${normalizedBody}
+          </svg>
         </g>
       `.trim()
     })
