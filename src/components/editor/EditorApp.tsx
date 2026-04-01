@@ -289,11 +289,8 @@ function EditorApp() {
   }, [primarySelection, glyphMap])
 
   const canEditSvgActions = useMemo(() => {
-    if (!primarySelection) return false
-    const glyph = glyphMap.get(primarySelection.glyphId)
-    // Enable for any non-raster glyph (imported or not)
-    return Boolean(glyph && !isRasterImportedGlyph(glyph))
-  }, [primarySelection, glyphMap])
+    return Boolean(primarySelection)
+  }, [primarySelection])
 
   const newInstanceId = () => `instance-${Date.now()}-${Math.random().toString(16).slice(2)}`
   const createInstance = (glyphId: string): GlyphInstance => {
@@ -758,10 +755,6 @@ function EditorApp() {
       rows
         .flat()
         .filter((instance) => selectedIds.includes(instance.id))
-        .filter((instance) => {
-          const glyph = glyphMap.get(instance.glyphId)
-          return Boolean(glyph && !isRasterImportedGlyph(glyph))
-        })
         .map((instance) => instance.id)
     )
 
@@ -771,7 +764,7 @@ function EditorApp() {
   ) => {
     const selectedSvgIds = getSelectedSvgIds()
     if (selectedSvgIds.size === 0) {
-      setStatus('Select a vector SVG glyph first')
+      setStatus('Select a glyph first')
       return
     }
 
@@ -1723,39 +1716,124 @@ function EditorApp() {
   }
 
   const renderRasterFromSvg = async (svgMarkup: string, format: 'png' | 'jpg' | 'webp') => {
-    const svgBlob = new Blob([svgMarkup], { type: 'image/svg+xml;charset=utf-8' })
-    const svgUrl = URL.createObjectURL(svgBlob)
-
-    try {
-      const image = await new Promise<HTMLImageElement>((resolve, reject) => {
-        const img = new Image()
-        img.onload = () => {
-          // Extra check: ensure image has content
-          if (img.naturalWidth === 0 || img.naturalHeight === 0) {
-            reject(new Error('SVG rendered image is empty (zero size).'))
-          } else {
-            resolve(img)
-          }
-        }
-        img.onerror = () => reject(new Error('Failed to render SVG for raster export'))
-        img.src = svgUrl
+    const blobToDataUrl = (blob: Blob) =>
+      new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(String(reader.result ?? ''))
+        reader.onerror = () => reject(new Error('Failed to convert blob to data URL'))
+        reader.readAsDataURL(blob)
       })
 
-      const width = Math.max(1, image.naturalWidth || 1024)
-      const height = Math.max(1, image.naturalHeight || 1024)
-      const canvas = document.createElement('canvas')
-      canvas.width = width
-      canvas.height = height
-      const context = canvas.getContext('2d')
-      if (!context) {
-        throw new Error('Canvas context unavailable')
+    const inlineExternalImageHrefs = async (markup: string) => {
+      const doc = new DOMParser().parseFromString(markup, 'image/svg+xml')
+      const svgRoot = doc.querySelector('svg')
+      if (!svgRoot) return markup
+
+      const cache = new Map<string, string>()
+      const images = Array.from(doc.querySelectorAll('image'))
+
+      for (const image of images) {
+        const href = image.getAttribute('href') ?? image.getAttribute('xlink:href') ?? ''
+        if (!href) continue
+        if (href.startsWith('data:')) continue
+        if (href.startsWith('#')) continue
+
+        let dataUrl = cache.get(href)
+        if (!dataUrl) {
+          try {
+            const response = await fetch(href)
+            if (!response.ok) continue
+            const blob = await response.blob()
+            dataUrl = await blobToDataUrl(blob)
+            cache.set(href, dataUrl)
+          } catch {
+            continue
+          }
+        }
+
+        image.setAttribute('href', dataUrl)
+        image.setAttribute('xlink:href', dataUrl)
       }
 
-      if (format === 'jpg') {
-        context.fillStyle = '#ffffff'
-        context.fillRect(0, 0, width, height)
+      return new XMLSerializer().serializeToString(svgRoot)
+    }
+
+    const hasVisiblePixels = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
+      const imageData = ctx.getImageData(0, 0, width, height)
+      const data = imageData.data
+      for (let i = 3; i < data.length; i += 4) {
+        if (data[i] !== 0) return true
       }
-      context.drawImage(image, 0, 0, width, height)
+      return false
+    }
+
+    const removeImageFilters = (markup: string) => {
+      const withoutFilterAttrs = markup.replace(/\sfilter="url\(#img-filter-[^)]+\)"/g, '')
+      return withoutFilterAttrs.replace(/<filter\s+id="img-filter-[^"]+"[\s\S]*?<\/filter>/g, '')
+    }
+
+    const rasterizeSvg = async (markup: string) => {
+      const svgBlob = new Blob([markup], { type: 'image/svg+xml;charset=utf-8' })
+      const svgUrl = URL.createObjectURL(svgBlob)
+
+      try {
+        const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+          const img = new Image()
+          img.onload = () => {
+            if (img.naturalWidth === 0 || img.naturalHeight === 0) {
+              reject(new Error('SVG rendered image is empty (zero size).'))
+            } else {
+              resolve(img)
+            }
+          }
+          img.onerror = () => reject(new Error('Failed to render SVG for raster export'))
+          img.src = svgUrl
+        })
+
+        const sourceWidth = Math.max(1, image.naturalWidth || 1024)
+        const sourceHeight = Math.max(1, image.naturalHeight || 1024)
+        const maxRasterDimension = 8192
+        const downscale = Math.min(1, maxRasterDimension / Math.max(sourceWidth, sourceHeight))
+        const width = Math.max(1, Math.round(sourceWidth * downscale))
+        const height = Math.max(1, Math.round(sourceHeight * downscale))
+
+        const canvas = document.createElement('canvas')
+        canvas.width = width
+        canvas.height = height
+        const context = canvas.getContext('2d')
+        if (!context) {
+          throw new Error('Canvas context unavailable')
+        }
+
+        if (format === 'jpg') {
+          context.fillStyle = '#ffffff'
+          context.fillRect(0, 0, width, height)
+        }
+
+        context.drawImage(image, 0, 0, width, height)
+
+        return { canvas, context, width, height }
+      } finally {
+        URL.revokeObjectURL(svgUrl)
+      }
+    }
+
+    try {
+      const normalizedSvgMarkup = await inlineExternalImageHrefs(svgMarkup)
+      let { canvas, context, width, height } = await rasterizeSvg(normalizedSvgMarkup)
+
+      if (!hasVisiblePixels(context, width, height)) {
+        const fallbackMarkup = removeImageFilters(normalizedSvgMarkup)
+        const fallback = await rasterizeSvg(fallbackMarkup)
+        canvas = fallback.canvas
+        context = fallback.context
+        width = fallback.width
+        height = fallback.height
+      }
+
+      if (!hasVisiblePixels(context, width, height)) {
+        throw new Error('Raster export produced an empty image. Try exporting as SVG to inspect source content.')
+      }
 
       const mime = format === 'jpg' ? 'image/jpeg' : format === 'webp' ? 'image/webp' : 'image/png'
       const blob = await new Promise<Blob | null>((resolve) => {
@@ -1770,8 +1848,6 @@ function EditorApp() {
       if (typeof setStatus === 'function') setStatus(String(err))
       if (typeof showToast === 'function') showToast(String(err))
       throw err
-    } finally {
-      URL.revokeObjectURL(svgUrl)
     }
   }
 

@@ -99,6 +99,9 @@ function EditorCanvas({
   const safeZoom = Math.max(0.1, zoom)
   const viewBoxWidth = viewWidth / safeZoom
   const viewBoxHeight = viewHeight / safeZoom
+  const isTouchDevice = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches
+  const controlScale = isTouchDevice ? 1.6 : 1
+  const canvasContainerRef = useRef<HTMLDivElement | null>(null)
   const svgRef = useRef<SVGSVGElement | null>(null)
   const dragRef = useRef<DragState | null>(null)
   const selectBoxRef = useRef<{ startX: number; startY: number } | null>(null)
@@ -448,32 +451,115 @@ function EditorCanvas({
     }
   }
 
+  const handleCanvasKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (penToolMode && penDraft) {
+      if (event.key === 'Enter') {
+        event.preventDefault()
+        finalizePenDraft(penDraft)
+        setPenDraft(null)
+        return
+      }
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        setPenDraft(null)
+        return
+      }
+    }
+
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      onAddRow()
+      return
+    }
+
+    if (!selectedInstance) return
+
+    const clampScale = (value: number) => Math.min(1.8, Math.max(0.5, value))
+    const moveStepPx = event.shiftKey ? Math.max(16, cellStep * 0.08) : Math.max(8, cellStep * 0.04)
+    const moveStep = moveStepPx / offsetScale
+    const rotateStep = event.shiftKey ? 15 : 3
+    const scaleStep = event.shiftKey ? 0.1 : 0.03
+
+    if (event.key === 'ArrowLeft') {
+      event.preventDefault()
+      onTranslate(-moveStep, 0)
+      return
+    }
+    if (event.key === 'ArrowRight') {
+      event.preventDefault()
+      onTranslate(moveStep, 0)
+      return
+    }
+    if (event.key === 'ArrowUp') {
+      event.preventDefault()
+      onTranslate(0, -moveStep)
+      return
+    }
+    if (event.key === 'ArrowDown') {
+      event.preventDefault()
+      onTranslate(0, moveStep)
+      return
+    }
+
+    if (event.key === '[' || event.key.toLowerCase() === 'q') {
+      event.preventDefault()
+      onSetRotate((selectedInstance.rotate ?? 0) - rotateStep)
+      return
+    }
+    if (event.key === ']' || event.key.toLowerCase() === 'e') {
+      event.preventDefault()
+      onSetRotate((selectedInstance.rotate ?? 0) + rotateStep)
+      return
+    }
+
+    if (event.key === '=' || event.key === '+') {
+      event.preventDefault()
+      const nextScale = clampScale((selectedInstance.scale ?? 1) + scaleStep)
+      onSetScale(Number(nextScale.toFixed(2)))
+      return
+    }
+    if (event.key === '-' || event.key === '_') {
+      event.preventDefault()
+      const nextScale = clampScale((selectedInstance.scale ?? 1) - scaleStep)
+      onSetScale(Number(nextScale.toFixed(2)))
+      return
+    }
+
+    if (event.key.toLowerCase() === 'x') {
+      event.preventDefault()
+      const nextScaleX = clampScale((selectedInstance.scaleX ?? selectedInstance.scale ?? 1) + scaleStep)
+      onSetScaleX(Number(nextScaleX.toFixed(2)))
+      return
+    }
+    if (event.key.toLowerCase() === 'z') {
+      event.preventDefault()
+      const nextScaleX = clampScale((selectedInstance.scaleX ?? selectedInstance.scale ?? 1) - scaleStep)
+      onSetScaleX(Number(nextScaleX.toFixed(2)))
+      return
+    }
+    if (event.key.toLowerCase() === 'y') {
+      event.preventDefault()
+      const nextScaleY = clampScale((selectedInstance.scaleY ?? selectedInstance.scale ?? 1) + scaleStep)
+      onSetScaleY(Number(nextScaleY.toFixed(2)))
+      return
+    }
+    if (event.key.toLowerCase() === 'h') {
+      event.preventDefault()
+      const nextScaleY = clampScale((selectedInstance.scaleY ?? selectedInstance.scale ?? 1) - scaleStep)
+      onSetScaleY(Number(nextScaleY.toFixed(2)))
+    }
+  }
+
   return (
     <div
+      ref={canvasContainerRef}
       className="w-full overflow-x-auto overflow-y-auto rounded-2xl border border-emerald-900/20 bg-linear-to-br from-[#fdfbf5] to-[#f4efe1] min-h-[clamp(300px,58vh,640px)]"
       tabIndex={0}
       onDragOver={handleCanvasDragOver}
       onDrop={handleCanvasDrop}
-      onKeyDown={(event) => {
-        if (penToolMode && penDraft) {
-          if (event.key === 'Enter') {
-            event.preventDefault()
-            finalizePenDraft(penDraft)
-            setPenDraft(null)
-            return
-          }
-          if (event.key === 'Escape') {
-            event.preventDefault()
-            setPenDraft(null)
-            return
-          }
-        }
-        if (event.key === 'Enter') {
-          event.preventDefault()
-          onAddRow()
-        }
-      }}
+      onKeyDown={handleCanvasKeyDown}
       onPointerDown={(event) => {
+        event.currentTarget.focus()
         if (event.button !== 0) return
         if (magicWandMode || penToolMode) return
         const point = handlePoint(event)
@@ -512,7 +598,7 @@ function EditorCanvas({
             <circle
               cx={activeBounds.x + activeBounds.width / 2}
               cy={activeBounds.y + activeBounds.height / 2}
-              r={Math.max(12, cellStep * 0.12)}
+              r={Math.max(12, cellStep * 0.12) * controlScale}
               fill="#2196f3"
               stroke="#1565c0"
               strokeWidth={3}
@@ -520,9 +606,9 @@ function EditorCanvas({
             />
             {/* Center crosshairs */}
             <line
-              x1={activeBounds.x + activeBounds.width / 2 - Math.max(20, cellStep * 0.2)}
+              x1={activeBounds.x + activeBounds.width / 2 - Math.max(20, cellStep * 0.2) * controlScale}
               y1={activeBounds.y + activeBounds.height / 2}
-              x2={activeBounds.x + activeBounds.width / 2 + Math.max(20, cellStep * 0.2)}
+              x2={activeBounds.x + activeBounds.width / 2 + Math.max(20, cellStep * 0.2) * controlScale}
               y2={activeBounds.y + activeBounds.height / 2}
               stroke="#2196f3"
               strokeWidth={1.5}
@@ -531,9 +617,9 @@ function EditorCanvas({
             />
             <line
               x1={activeBounds.x + activeBounds.width / 2}
-              y1={activeBounds.y + activeBounds.height / 2 - Math.max(20, cellStep * 0.2)}
+              y1={activeBounds.y + activeBounds.height / 2 - Math.max(20, cellStep * 0.2) * controlScale}
               x2={activeBounds.x + activeBounds.width / 2}
-              y2={activeBounds.y + activeBounds.height / 2 + Math.max(20, cellStep * 0.2)}
+              y2={activeBounds.y + activeBounds.height / 2 + Math.max(20, cellStep * 0.2) * controlScale}
               stroke="#2196f3"
               strokeWidth={1.5}
               opacity={0.6}
@@ -544,7 +630,7 @@ function EditorCanvas({
               x1={activeBounds.x + activeBounds.width / 2}
               y1={activeBounds.y}
               x2={activeBounds.x + activeBounds.width / 2}
-              y2={activeBounds.y - Math.max(20, cellStep * 0.2)}
+              y2={activeBounds.y - Math.max(20, cellStep * 0.2) * controlScale}
               stroke="#2563eb"
               strokeWidth={1.5}
               pointerEvents="none"
@@ -573,16 +659,16 @@ function EditorCanvas({
             >
               <circle
                 cx={activeBounds.x + activeBounds.width / 2}
-                cy={activeBounds.y - Math.max(20, cellStep * 0.2)}
-                r={Math.max(11, cellStep * 0.11)}
+                cy={activeBounds.y - Math.max(20, cellStep * 0.2) * controlScale}
+                r={Math.max(11, cellStep * 0.11) * controlScale}
                 fill="#eff6ff"
                 stroke="#2563eb"
                 strokeWidth={2.5}
               />
               <MdOutlineCropRotate
-                x={activeBounds.x + activeBounds.width / 2 - Math.max(8, cellStep * 0.08)}
-                y={activeBounds.y - Math.max(20, cellStep * 0.2) - Math.max(8, cellStep * 0.08)}
-                size={Math.max(40, cellStep * 0.18)}
+                x={activeBounds.x + activeBounds.width / 2 - Math.max(8, cellStep * 0.08) * controlScale}
+                y={activeBounds.y - Math.max(20, cellStep * 0.2) * controlScale - Math.max(8, cellStep * 0.08) * controlScale}
+                size={60 * controlScale}
                 color="#2563eb"
                 style={{ pointerEvents: 'none' }}
               />
@@ -591,10 +677,10 @@ function EditorCanvas({
             <circle
               cx={activeBounds.x + activeBounds.width / 2}
               cy={activeBounds.y}
-              r={Math.max(6, cellStep * 0.06)}
+              r={Math.max(6, cellStep * 0.06) * controlScale}
               fill="#0f766e"
               stroke="#fff"
-              strokeWidth={1.5}
+              strokeWidth={1.5 * controlScale}
               className="cursor-ns-resize"
               onPointerDown={(event) => {
                 event.stopPropagation()
@@ -619,10 +705,10 @@ function EditorCanvas({
             <circle
               cx={activeBounds.x + activeBounds.width / 2}
               cy={activeBounds.y + activeBounds.height}
-              r={Math.max(6, cellStep * 0.06)}
+              r={Math.max(6, cellStep * 0.06) * controlScale}
               fill="#0f766e"
               stroke="#fff"
-              strokeWidth={1.5}
+              strokeWidth={1.5 * controlScale}
               className="cursor-ns-resize"
               onPointerDown={(event) => {
                 event.stopPropagation()
@@ -647,10 +733,10 @@ function EditorCanvas({
             <circle
               cx={activeBounds.x}
               cy={activeBounds.y + activeBounds.height / 2}
-              r={Math.max(6, cellStep * 0.06)}
+              r={Math.max(6, cellStep * 0.06) * controlScale}
               fill="#0f766e"
               stroke="#fff"
-              strokeWidth={1.5}
+              strokeWidth={1.5 * controlScale}
               className="cursor-ew-resize"
               onPointerDown={(event) => {
                 event.stopPropagation()
@@ -675,10 +761,10 @@ function EditorCanvas({
             <circle
               cx={activeBounds.x + activeBounds.width}
               cy={activeBounds.y + activeBounds.height / 2}
-              r={Math.max(6, cellStep * 0.06)}
+              r={Math.max(6, cellStep * 0.06) * controlScale}
               fill="#0f766e"
               stroke="#fff"
-              strokeWidth={1.5}
+              strokeWidth={1.5 * controlScale}
               className="cursor-ew-resize"
               onPointerDown={(event) => {
                 event.stopPropagation()

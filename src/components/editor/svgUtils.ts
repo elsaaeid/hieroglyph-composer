@@ -151,6 +151,131 @@ export function buildTransform(item: LayoutItem, glyph: GlyphDef, cellStep: numb
   ].join(' ')
 }
 
+type Matrix2D = {
+  a: number
+  b: number
+  c: number
+  d: number
+  e: number
+  f: number
+}
+
+function identityMatrix(): Matrix2D {
+  return { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 }
+}
+
+function multiplyMatrix(left: Matrix2D, right: Matrix2D): Matrix2D {
+  return {
+    a: left.a * right.a + left.c * right.b,
+    b: left.b * right.a + left.d * right.b,
+    c: left.a * right.c + left.c * right.d,
+    d: left.b * right.c + left.d * right.d,
+    e: left.a * right.e + left.c * right.f + left.e,
+    f: left.b * right.e + left.d * right.f + left.f,
+  }
+}
+
+function translateMatrix(x: number, y: number): Matrix2D {
+  return { a: 1, b: 0, c: 0, d: 1, e: x, f: y }
+}
+
+function scaleMatrix(x: number, y: number): Matrix2D {
+  return { a: x, b: 0, c: 0, d: y, e: 0, f: 0 }
+}
+
+function rotateMatrix(angleDegrees: number): Matrix2D {
+  const radians = (angleDegrees * Math.PI) / 180
+  const cosine = Math.cos(radians)
+  const sine = Math.sin(radians)
+  return { a: cosine, b: sine, c: -sine, d: cosine, e: 0, f: 0 }
+}
+
+function skewXMatrix(angleDegrees: number): Matrix2D {
+  const radians = (angleDegrees * Math.PI) / 180
+  return { a: 1, b: 0, c: Math.tan(radians), d: 1, e: 0, f: 0 }
+}
+
+function skewYMatrix(angleDegrees: number): Matrix2D {
+  const radians = (angleDegrees * Math.PI) / 180
+  return { a: 1, b: Math.tan(radians), c: 0, d: 1, e: 0, f: 0 }
+}
+
+function applyMatrixToPoint(matrix: Matrix2D, x: number, y: number): { x: number; y: number } {
+  return {
+    x: matrix.a * x + matrix.c * y + matrix.e,
+    y: matrix.b * x + matrix.d * y + matrix.f,
+  }
+}
+
+function buildTransformMatrix(item: LayoutItem, glyph: GlyphDef, cellStep: number): Matrix2D {
+  const svgCenterX = glyph.viewBoxMinX + glyph.width / 2
+  const svgCenterY = glyph.viewBoxMinY + glyph.height / 2
+
+  let fitScale = QUADRAT / Math.max(glyph.width, glyph.height)
+  if (!Number.isFinite(fitScale) || fitScale < 0.1) fitScale = 0.1
+  if (fitScale > 2) fitScale = 2
+
+  const flipX = item.instance.flipX ? -1 : 1
+  const flipY = item.instance.flipY ? -1 : 1
+  const userScaleX = item.instance.scaleX ?? item.instance.scale
+  const userScaleY = item.instance.scaleY ?? item.instance.scale
+  const skewX = item.instance.skewX ?? 0
+  const skewY = item.instance.skewY ?? 0
+  const matrixA = item.instance.matrixA ?? 1
+  const matrixB = item.instance.matrixB ?? 0
+  const matrixC = item.instance.matrixC ?? 0
+  const matrixD = item.instance.matrixD ?? 1
+  const matrixE = item.instance.matrixE ?? 0
+  const matrixF = item.instance.matrixF ?? 0
+
+  const offsetScale = cellStep / QUADRAT
+  const offsetX = (item.instance.offsetX ?? 0) * offsetScale
+  const offsetY = (item.instance.offsetY ?? 0) * offsetScale
+
+  const cellCenterX = item.x + cellStep / 2
+  const cellCenterY = item.y + cellStep / 2
+  const pivotX = item.instance.selectionCenter?.centerX ?? cellCenterX
+  const pivotY = item.instance.selectionCenter?.centerY ?? cellCenterY
+
+  return [
+    translateMatrix(offsetX, offsetY),
+    translateMatrix(pivotX, pivotY),
+    { a: matrixA, b: matrixB, c: matrixC, d: matrixD, e: matrixE, f: matrixF },
+    skewYMatrix(skewY),
+    skewXMatrix(skewX),
+    rotateMatrix(item.instance.rotate),
+    scaleMatrix(flipX * userScaleX, flipY * userScaleY),
+    scaleMatrix(fitScale, fitScale),
+    translateMatrix(-svgCenterX, -svgCenterY),
+  ].reduce((acc, next) => multiplyMatrix(acc, next), identityMatrix())
+}
+
+function getTransformedBounds(item: LayoutItem, glyph: GlyphDef, cellStep: number) {
+  const matrix = buildTransformMatrix(item, glyph, cellStep)
+  const sourceMinX = Number.isFinite(glyph.contentMinX) ? glyph.contentMinX : glyph.viewBoxMinX
+  const sourceMinY = Number.isFinite(glyph.contentMinY) ? glyph.contentMinY : glyph.viewBoxMinY
+  const sourceWidth =
+    Number.isFinite(glyph.contentWidth) && glyph.contentWidth > 0 ? glyph.contentWidth : glyph.width
+  const sourceHeight =
+    Number.isFinite(glyph.contentHeight) && glyph.contentHeight > 0 ? glyph.contentHeight : glyph.height
+  const corners = [
+    applyMatrixToPoint(matrix, sourceMinX, sourceMinY),
+    applyMatrixToPoint(matrix, sourceMinX + sourceWidth, sourceMinY),
+    applyMatrixToPoint(matrix, sourceMinX, sourceMinY + sourceHeight),
+    applyMatrixToPoint(matrix, sourceMinX + sourceWidth, sourceMinY + sourceHeight),
+  ]
+
+  const xs = corners.map((point) => point.x)
+  const ys = corners.map((point) => point.y)
+
+  return {
+    minX: Math.min(...xs),
+    minY: Math.min(...ys),
+    maxX: Math.max(...xs),
+    maxY: Math.max(...ys),
+  }
+}
+
 export function buildExportSvg(
   rows: GlyphInstance[][],
   glyphMap: Map<string, GlyphDef>,
@@ -174,10 +299,21 @@ export function buildExportSvg(
     .sort((a, b) => a.z - b.z || a.index - b.index)
     .map((entry) => entry.item)
 
-  const minX = Math.min(...layoutByLayer.map((item) => item.x))
-  const minY = Math.min(...layoutByLayer.map((item) => item.y))
-  const maxX = Math.max(...layoutByLayer.map((item) => item.x + cellStep))
-  const maxY = Math.max(...layoutByLayer.map((item) => item.y + cellStep))
+  const transformedBounds = layoutByLayer
+    .map((item) => {
+      const glyph = glyphMap.get(item.instance.glyphId)
+      return glyph ? getTransformedBounds(item, glyph, cellStep) : null
+    })
+    .filter(Boolean) as Array<{ minX: number; minY: number; maxX: number; maxY: number }>
+
+  if (transformedBounds.length === 0) {
+    return ''
+  }
+
+  const minX = Math.min(...transformedBounds.map((bounds) => bounds.minX))
+  const minY = Math.min(...transformedBounds.map((bounds) => bounds.minY))
+  const maxX = Math.max(...transformedBounds.map((bounds) => bounds.maxX))
+  const maxY = Math.max(...transformedBounds.map((bounds) => bounds.maxY))
   const exportPadding = cellStep * 0.5
   const width = Math.max(cellStep, maxX - minX + exportPadding * 2)
   const height = Math.max(cellStep, maxY - minY + exportPadding * 2)
@@ -233,40 +369,11 @@ export function buildExportSvg(
     .filter(Boolean)
     .join('')
 
-  let customViewBox = null;
-  let singleLetterGlyph = null;
-  let customWidth = width;
-  let customHeight = height;
-  if (layoutByLayer.length === 1) {
-    const glyph = glyphMap.get(layoutByLayer[0].instance.glyphId);
-    if (glyph && /^[a-zA-Z]/.test(String(glyph.id))) {
-      singleLetterGlyph = glyph;
-      // Match artboard: export at cellStep x cellStep, scale and center glyph
-      customWidth = cellStep;
-      customHeight = cellStep;
-      customViewBox = `0 0 ${cellStep} ${cellStep}`;
-    }
-  }
-
   const body = layoutByLayer
     .map((item) => {
       const glyph = glyphMap.get(item.instance.glyphId)
       if (!glyph) return ''
       let normalizedBody = ensureImageHrefCompatibility(glyph.body);
-      // For single letter-ID glyph, scale and center to fit cellStep (like artboard)
-      if (singleLetterGlyph && glyph.id === singleLetterGlyph.id) {
-        // Compute fitScale and center
-        const fitScale = cellStep / Math.max(glyph.width, glyph.height);
-        const centerX = cellStep / 2;
-        const centerY = cellStep / 2;
-        const svgCenterX = glyph.viewBoxMinX + glyph.width / 2;
-        const svgCenterY = glyph.viewBoxMinY + glyph.height / 2;
-        return `
-          <g transform="translate(${centerX},${centerY}) scale(${fitScale}) translate(${-svgCenterX},${-svgCenterY})">
-            ${normalizedBody}
-          </g>
-        `.trim();
-      }
       const exportItem: LayoutItem = {
         ...item,
         x: item.x - minX + exportPadding,
@@ -290,9 +397,9 @@ export function buildExportSvg(
     <svg
       xmlns="http://www.w3.org/2000/svg"
       xmlns:xlink="http://www.w3.org/1999/xlink"
-      viewBox="${customViewBox ? customViewBox : `0 0 ${width} ${height}`}"
-      width="${customWidth * exportScale}"
-      height="${customHeight * exportScale}"
+      viewBox="0 0 ${width} ${height}"
+      width="${width * exportScale}"
+      height="${height * exportScale}"
     >
       ${filterDefs ? `<defs>${filterDefs}</defs>` : ''}
       ${body}
