@@ -163,7 +163,7 @@ function EditorToolbar({
           <MdKeyboardArrowDown size={18} className={`transition-transform ${openMenu === 'history' ? 'rotate-180' : ''}`} />
         </button>
         {openMenu === 'history' && (
-          <div className={menuPanelClass + 'right-0 sm:left-0'}>
+          <div className={menuPanelClass}>
             <div className="flex gap-2">
               <button
                 className="flex flex-1 items-center justify-center gap-1 rounded-full border border-emerald-900/30 px-3 py-2 text-sm font-semibold text-emerald-900 disabled:cursor-not-allowed disabled:opacity-50"

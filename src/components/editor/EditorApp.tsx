@@ -1951,7 +1951,7 @@ function EditorApp() {
       />
       <div className="app-main-row flex flex-row gap-4 w-full">
         {/* Mobile: Sidebar inside artboard (above toolbar/canvas), Desktop: Sidebar right */}
-        <main className="app-canvas min-w-0 rounded-2xl bg-white/90 p-5 shadow-[0_18px_36px_rgba(27,26,23,0.12)] flex flex-wrap gap-4 min-h-0 flex-1 relative">
+        <main className="app-canvas min-w-0 rounded-2xl bg-white/90 p-5 shadow-[0_18px_36px_rgba(27,26,23,0.12)] flex flex-col gap-4 min-h-0 flex-1 relative">
           {/* Mobile sidebar (above artboard content) */}
           <div className="block sm:hidden mb-4">
             <div className={`app-sidebar-right ${isRightSidebarCollapsed ? 'collapsed' : ''}`}> 
