@@ -277,7 +277,7 @@ function EditorHeader({
               <MdKeyboardArrowDown size={18} className={`transition-transform ${imageDropdownOpen ? 'rotate-180' : ''}`} />
             </button>
             {imageDropdownOpen && (
-              <div className="absolute top-full z-50 mt-2 min-w-50 rounded-xl bg-white shadow-lg ring-1 ring-emerald-900/10 overflow-auto max-h-96">
+              <div className="absolute right-0 top-full z-50 mt-2 min-w-50 rounded-xl bg-white shadow-lg ring-1 ring-emerald-900/10 overflow-auto max-h-96">
                 <ul className="py-2">
                   <li className="px-4 py-2 text-xs text-stone-600">
                     {imageEditingEnabled ? 'Image editing and color operations.' : 'Select an imported image to enable.'}
