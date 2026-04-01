@@ -6,6 +6,7 @@ declare global {
   }
 }
 import { useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { MdOutlineCropRotate } from 'react-icons/md'
 import { buildTransform } from './svgUtils'
 import type { PointerEvent } from 'react'
 import type { GlyphDef, LayoutItem } from './types'
@@ -242,15 +243,41 @@ function EditorCanvas({
 
     if (!dragRef.current || !selectedItem) return
     const drag = dragRef.current
-    const centerX = selectedItem.x + cellStep / 2 + offsetX
-    const centerY = selectedItem.y + cellStep / 2 + offsetY
+    const centerX = activeBounds.x + activeBounds.width / 2
+    const centerY = activeBounds.y + activeBounds.height / 2
 
     if (drag.mode === 'move') {
       const deltaX = point.x - drag.lastX
       const deltaY = point.y - drag.lastY
-      drag.lastX = point.x
-      drag.lastY = point.y
-      onTranslate(deltaX / offsetScale, deltaY / offsetScale)
+      
+      // Calculate what the new bounds would be after the move
+      const newBoundsX = activeBounds.x + deltaX
+      const newBoundsY = activeBounds.y + deltaY
+      const newBoundsMaxX = newBoundsX + activeBounds.width
+      const newBoundsMaxY = newBoundsY + activeBounds.height
+      
+      // Constrain to artboard boundaries (0, 0) to (viewBoxWidth, viewBoxHeight)
+      let constrainedDeltaX = deltaX
+      let constrainedDeltaY = deltaY
+      
+      if (newBoundsX < 0) {
+        constrainedDeltaX = -activeBounds.x
+      } else if (newBoundsMaxX > viewBoxWidth) {
+        constrainedDeltaX = viewBoxWidth - newBoundsMaxX
+      }
+      
+      if (newBoundsY < 0) {
+        constrainedDeltaY = -activeBounds.y
+      } else if (newBoundsMaxY > viewBoxHeight) {
+        constrainedDeltaY = viewBoxHeight - newBoundsMaxY
+      }
+      
+      drag.lastX = point.x - (deltaX - constrainedDeltaX)
+      drag.lastY = point.y - (deltaY - constrainedDeltaY)
+      
+      if (constrainedDeltaX !== 0 || constrainedDeltaY !== 0) {
+        onTranslate(constrainedDeltaX / offsetScale, constrainedDeltaY / offsetScale)
+      }
       return
     }
 
@@ -467,17 +494,226 @@ function EditorCanvas({
         onPointerUp={endDrag}
         onPointerLeave={() => endDrag()}
       >
-        {/* Blue circle at transform border center */}
+        {/* Center point and border visualization */}
         {selectedItem && activeBounds && (
-          <circle
-            cx={activeBounds.centerX}
-            cy={activeBounds.centerY}
-            r={Math.max(8, cellStep * 0.08)}
-            fill="#2196f3"
-            stroke="#1565c0"
-            strokeWidth={2}
-            opacity={0.7}
-          />
+          <g>
+            {/* Red border rectangle around selection */}
+            <rect
+              x={activeBounds.x}
+              y={activeBounds.y}
+              width={activeBounds.width}
+              height={activeBounds.height}
+              fill="none"
+              stroke="#f00"
+              strokeWidth={3}
+              pointerEvents="none"
+            />
+            {/* Center circle - calculated from bounds to ensure it's centered */}
+            <circle
+              cx={activeBounds.x + activeBounds.width / 2}
+              cy={activeBounds.y + activeBounds.height / 2}
+              r={Math.max(12, cellStep * 0.12)}
+              fill="#2196f3"
+              stroke="#1565c0"
+              strokeWidth={3}
+              opacity={0.9}
+            />
+            {/* Center crosshairs */}
+            <line
+              x1={activeBounds.x + activeBounds.width / 2 - Math.max(20, cellStep * 0.2)}
+              y1={activeBounds.y + activeBounds.height / 2}
+              x2={activeBounds.x + activeBounds.width / 2 + Math.max(20, cellStep * 0.2)}
+              y2={activeBounds.y + activeBounds.height / 2}
+              stroke="#2196f3"
+              strokeWidth={1.5}
+              opacity={0.6}
+              pointerEvents="none"
+            />
+            <line
+              x1={activeBounds.x + activeBounds.width / 2}
+              y1={activeBounds.y + activeBounds.height / 2 - Math.max(20, cellStep * 0.2)}
+              x2={activeBounds.x + activeBounds.width / 2}
+              y2={activeBounds.y + activeBounds.height / 2 + Math.max(20, cellStep * 0.2)}
+              stroke="#2196f3"
+              strokeWidth={1.5}
+              opacity={0.6}
+              pointerEvents="none"
+            />
+            {/* Rotation handle with icon */}
+            <line
+              x1={activeBounds.x + activeBounds.width / 2}
+              y1={activeBounds.y}
+              x2={activeBounds.x + activeBounds.width / 2}
+              y2={activeBounds.y - Math.max(20, cellStep * 0.2)}
+              stroke="#dc2626"
+              strokeWidth={1.5}
+              pointerEvents="none"
+            />
+            <g
+              className="cursor-grab"
+              onPointerDown={(event) => {
+                event.stopPropagation()
+                const point = handlePoint(event)
+                if (!point) return
+                const centerX = activeBounds.x + activeBounds.width / 2
+                const centerY = activeBounds.y + activeBounds.height / 2
+                dragRef.current = {
+                  mode: 'rotate',
+                  lastX: point.x,
+                  lastY: point.y,
+                  startAngle: Math.atan2(point.y - centerY, point.x - centerX),
+                  startRotate: selectedInstance?.rotate ?? 0,
+                  startDistance: 1,
+                  startScale: selectedInstance?.scale ?? 1,
+                  startScaleX: selectedInstance?.scaleX ?? selectedInstance?.scale ?? 1,
+                  startScaleY: selectedInstance?.scaleY ?? selectedInstance?.scale ?? 1,
+                }
+                svgRef.current?.setPointerCapture(event.pointerId)
+              }}
+            >
+              <circle
+                cx={activeBounds.x + activeBounds.width / 2}
+                cy={activeBounds.y - Math.max(20, cellStep * 0.2)}
+                r={Math.max(9, cellStep * 0.09)}
+                fill="#ffffff"
+                stroke="#dc2626"
+                strokeWidth={2}
+              />
+              <foreignObject
+                x={activeBounds.x + activeBounds.width / 2 - Math.max(8, cellStep * 0.08)}
+                y={activeBounds.y - Math.max(20, cellStep * 0.2) - Math.max(8, cellStep * 0.08)}
+                width={Math.max(16, cellStep * 0.16)}
+                height={Math.max(16, cellStep * 0.16)}
+                pointerEvents="none"
+              >
+                <div
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#dc2626',
+                  }}
+                >
+                  <MdOutlineCropRotate size={Math.max(14, cellStep * 0.14)} />
+                </div>
+              </foreignObject>
+            </g>
+            {/* Scaling handles at edges - teal/dark cyan color */}
+            <circle
+              cx={activeBounds.x + activeBounds.width / 2}
+              cy={activeBounds.y}
+              r={Math.max(6, cellStep * 0.06)}
+              fill="#0f766e"
+              stroke="#fff"
+              strokeWidth={1.5}
+              className="cursor-ns-resize"
+              onPointerDown={(event) => {
+                event.stopPropagation()
+                const point = handlePoint(event)
+                if (!point) return
+                const centerX = activeBounds.x + activeBounds.width / 2
+                const centerY = activeBounds.y + activeBounds.height / 2
+                dragRef.current = {
+                  mode: 'scale',
+                  lastX: point.x,
+                  lastY: point.y,
+                  startAngle: 0,
+                  startRotate: 0,
+                  startDistance: Math.hypot(point.x - centerX, point.y - centerY),
+                  startScale: selectedInstance?.scale ?? 1,
+                  startScaleX: selectedInstance?.scaleX ?? selectedInstance?.scale ?? 1,
+                  startScaleY: selectedInstance?.scaleY ?? selectedInstance?.scale ?? 1,
+                }
+                svgRef.current?.setPointerCapture(event.pointerId)
+              }}
+            />
+            <circle
+              cx={activeBounds.x + activeBounds.width / 2}
+              cy={activeBounds.y + activeBounds.height}
+              r={Math.max(6, cellStep * 0.06)}
+              fill="#0f766e"
+              stroke="#fff"
+              strokeWidth={1.5}
+              className="cursor-ns-resize"
+              onPointerDown={(event) => {
+                event.stopPropagation()
+                const point = handlePoint(event)
+                if (!point) return
+                const centerX = activeBounds.x + activeBounds.width / 2
+                const centerY = activeBounds.y + activeBounds.height / 2
+                dragRef.current = {
+                  mode: 'scale',
+                  lastX: point.x,
+                  lastY: point.y,
+                  startAngle: 0,
+                  startRotate: 0,
+                  startDistance: Math.hypot(point.x - centerX, point.y - centerY),
+                  startScale: selectedInstance?.scale ?? 1,
+                  startScaleX: selectedInstance?.scaleX ?? selectedInstance?.scale ?? 1,
+                  startScaleY: selectedInstance?.scaleY ?? selectedInstance?.scale ?? 1,
+                }
+                svgRef.current?.setPointerCapture(event.pointerId)
+              }}
+            />
+            <circle
+              cx={activeBounds.x}
+              cy={activeBounds.y + activeBounds.height / 2}
+              r={Math.max(6, cellStep * 0.06)}
+              fill="#0f766e"
+              stroke="#fff"
+              strokeWidth={1.5}
+              className="cursor-ew-resize"
+              onPointerDown={(event) => {
+                event.stopPropagation()
+                const point = handlePoint(event)
+                if (!point) return
+                const centerX = activeBounds.x + activeBounds.width / 2
+                const centerY = activeBounds.y + activeBounds.height / 2
+                dragRef.current = {
+                  mode: 'scale',
+                  lastX: point.x,
+                  lastY: point.y,
+                  startAngle: 0,
+                  startRotate: 0,
+                  startDistance: Math.hypot(point.x - centerX, point.y - centerY),
+                  startScale: selectedInstance?.scale ?? 1,
+                  startScaleX: selectedInstance?.scaleX ?? selectedInstance?.scale ?? 1,
+                  startScaleY: selectedInstance?.scaleY ?? selectedInstance?.scale ?? 1,
+                }
+                svgRef.current?.setPointerCapture(event.pointerId)
+              }}
+            />
+            <circle
+              cx={activeBounds.x + activeBounds.width}
+              cy={activeBounds.y + activeBounds.height / 2}
+              r={Math.max(6, cellStep * 0.06)}
+              fill="#0f766e"
+              stroke="#fff"
+              strokeWidth={1.5}
+              className="cursor-ew-resize"
+              onPointerDown={(event) => {
+                event.stopPropagation()
+                const point = handlePoint(event)
+                if (!point) return
+                const centerX = activeBounds.x + activeBounds.width / 2
+                const centerY = activeBounds.y + activeBounds.height / 2
+                dragRef.current = {
+                  mode: 'scale',
+                  lastX: point.x,
+                  lastY: point.y,
+                  startAngle: 0,
+                  startRotate: 0,
+                  startDistance: Math.hypot(point.x - centerX, point.y - centerY),
+                  startScale: selectedInstance?.scale ?? 1,
+                  startScaleX: selectedInstance?.scaleX ?? selectedInstance?.scale ?? 1,
+                  startScaleY: selectedInstance?.scaleY ?? selectedInstance?.scale ?? 1,
+                }
+                svgRef.current?.setPointerCapture(event.pointerId)
+              }}
+            />
+          </g>
         )}
         {selectRect && (
           <rect
@@ -503,8 +739,6 @@ function EditorCanvas({
             // console.log('SYMBOL:', safeId, 'viewBox:', glyph.viewBox, 'body:', glyph.body);
             return (
               <symbol key={safeId} id={safeId} viewBox={glyph.viewBox}>
-                {/* Debug rectangle to visualize symbol bounds */}
-                <rect x={0} y={0} width={glyph.width} height={glyph.height} fill="none" stroke="#f00" strokeWidth={1} />
                 <g dangerouslySetInnerHTML={{ __html: cleanBody }} />
               </symbol>
             );
@@ -714,18 +948,6 @@ function EditorCanvas({
               }}
             >
               <use href={`#${safeId}`} />
-              {/* Debug: blue rectangle overlay for every glyph instance */}
-              <rect
-                x={0}
-                y={0}
-                width={glyph.width}
-                height={glyph.height}
-                fill="none"
-                stroke="#2196f3"
-                strokeWidth={1.5}
-                pointerEvents="none"
-                style={{ mixBlendMode: 'multiply' }}
-              />
               {selectedIds.includes(item.instance.id) &&
                 (item.instance.magicSelectionSeeds ??
                   (item.instance.magicSelectionSeed ? [item.instance.magicSelectionSeed] : [])).map(

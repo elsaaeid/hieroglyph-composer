@@ -296,36 +296,57 @@ function EditorApp() {
   }, [primarySelection, glyphMap])
 
   const newInstanceId = () => `instance-${Date.now()}-${Math.random().toString(16).slice(2)}`
-  const createInstance = (glyphId: string): GlyphInstance => ({
-    id: newInstanceId(),
-    glyphId,
-    zIndex: nextZIndexRef.current++,
-    rotate: 0,
-    flipX: false,
-    flipY: false,
-    scale: 1,
-    scaleX: 1,
-    scaleY: 1,
-    skewX: 0,
-    skewY: 0,
-    matrixA: 1,
-    matrixB: 0,
-    matrixC: 0,
-    matrixD: 1,
-    matrixE: 0,
-    matrixF: 0,
-    brightness: 1,
-    contrast: 1,
-    exposure: 0,
-    hue: 0,
-    saturation: 1,
-    vibrance: 0,
-    blur: 0,
-    sharpen: 0,
-    noise: 0,
-    offsetX: 0,
-    offsetY: 0,
-  })
+  const createInstance = (glyphId: string): GlyphInstance => {
+    // Check glyph size and auto-scale if too large
+    const glyph = glyphMap.get(glyphId)
+    let initialScale = 1
+    
+    if (glyph) {
+      const fitScale = QUADRAT / Math.max(glyph.width, glyph.height)
+      const glyphWidth = glyph.width * fitScale
+      const glyphHeight = glyph.height * fitScale
+      
+      // If glyph is larger than 50% of the artboard, scale it down
+      const maxAllowedSize = Math.max(glyphWidth, glyphHeight)
+      const artboardSize = Math.min(1200, 800) // Reasonable artboard max size
+      
+      if (maxAllowedSize > artboardSize * 0.5) {
+        initialScale = (artboardSize * 0.4) / maxAllowedSize
+        initialScale = Math.max(0.1, Math.min(1, initialScale)) // Clamp between 0.1 and 1
+      }
+    }
+    
+    return {
+      id: newInstanceId(),
+      glyphId,
+      zIndex: nextZIndexRef.current++,
+      rotate: 0,
+      flipX: false,
+      flipY: false,
+      scale: initialScale,
+      scaleX: initialScale,
+      scaleY: initialScale,
+      skewX: 0,
+      skewY: 0,
+      matrixA: 1,
+      matrixB: 0,
+      matrixC: 0,
+      matrixD: 1,
+      matrixE: 0,
+      matrixF: 0,
+      brightness: 1,
+      contrast: 1,
+      exposure: 0,
+      hue: 0,
+      saturation: 1,
+      vibrance: 0,
+      blur: 0,
+      sharpen: 0,
+      noise: 0,
+      offsetX: 0,
+      offsetY: 0,
+    }
+  }
 
   const shortenLayerLabel = (label: string, maxLength = 20) => {
     const clean = label.trim()
