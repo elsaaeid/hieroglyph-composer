@@ -136,9 +136,9 @@ function EditorHeader({
       </div>
       <div className="flex w-full items-center lg:w-auto lg:justify-end">
         {/* Bottom full-width tab row on mobile, normal row on desktop */}
-        <div className="flex w-full overflow-x-clip grid-cols-4 gap-2 lg:flex lg:w-auto lg:flex-row lg:flex-wrap">
+        <div className="top-tabs flex w-full overflow-x-auto grid-cols-4 gap-2 lg:flex lg:w-auto lg:flex-row lg:flex-wrap">
           {/* File Dropdown (refactored to match Image Dropdown structure) */}
-          <div className="relative" ref={dropdownRef}>
+          <div ref={dropdownRef}>
             <button
               className="header-button flex w-full items-center justify-center gap-2 rounded-full bg-emerald-900 px-3 py-2 text-sm font-semibold text-amber-50 shadow transition hover:-translate-y-0.5 hover:shadow-[0_10px_20px_rgba(29,59,47,0.2)] lg:w-auto lg:px-4"
               onClick={() => setDropdownOpen((v) => !v)}
@@ -237,7 +237,7 @@ function EditorHeader({
             )}
           </div>
           {/* Library Dropdown */}
-          <div className="relative" ref={libraryDropdownRef}>
+          <div ref={libraryDropdownRef}>
             <button
               className="header-button flex w-full items-center justify-center gap-2 rounded-full bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-900 shadow transition hover:-translate-y-0.5 hover:shadow-[0_10px_20px_rgba(29,59,47,0.08)] lg:w-auto lg:px-4"
               onClick={() => setLibraryDropdownOpen((v) => !v)}
@@ -265,7 +265,7 @@ function EditorHeader({
             )}
           </div>
           {/* Image Dropdown */}
-          <div className="relative" ref={imageDropdownRef}>
+          <div ref={imageDropdownRef}>
             <button
               className="header-button flex w-full items-center justify-center gap-2 rounded-full bg-amber-50 px-3 py-2 text-sm font-semibold text-emerald-900 shadow transition hover:-translate-y-0.5 hover:shadow-[0_10px_20px_rgba(29,59,47,0.08)] lg:w-auto lg:px-4"
               onClick={() => setImageDropdownOpen((v) => !v)}
@@ -344,7 +344,7 @@ function EditorHeader({
             )}
           </div>
           {/* Edit Dropdown */}
-          <div className="relative" ref={editDropdownRef}>
+          <div ref={editDropdownRef}>
             <button
               className="header-button flex w-full items-center justify-center gap-2 rounded-full bg-emerald-100 px-3 py-2 text-sm font-semibold text-emerald-900 shadow transition hover:-translate-y-0.5 hover:shadow-[0_10px_20px_rgba(29,59,47,0.08)] lg:w-auto lg:px-4"
               onClick={() => setEditDropdownOpen((v) => !v)}
