@@ -311,7 +311,7 @@ function EditorApp() {
       const artboardSize = Math.min(1200, 800) // Reasonable artboard max size
       
       if (maxAllowedSize > artboardSize * 0.5) {
-        initialScale = (artboardSize * 0.4) / maxAllowedSize
+        initialScale = (artboardSize * 0.5) / maxAllowedSize
         initialScale = Math.max(0.1, Math.min(1, initialScale)) // Clamp between 0.1 and 1
       }
     }
