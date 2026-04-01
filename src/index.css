@@ -190,14 +190,14 @@
 
 
   .app-sidebar-right.collapsed > .relative > .sidebar-collapse-button {
-    min-width: 2rem;
-    max-width: 3rem;
-    height: auto;
-    min-height: 2rem;
-    max-height: 3rem;
-    padding: 0.5rem 0.25rem;
-    font-size: 1.1rem;
-  }
+        width: 0.2rem;
+        height: 0.2rem;
+        min-width: 1.8rem;
+        min-height: 1.8rem;
+        font-size: 1rem;
+        padding: 0.25rem 0.25rem;
+        margin-top: -8px;
+    }
 
   .app-sidebar-right.collapsed > .relative > * {
     display: none;
@@ -223,14 +223,6 @@
     min-height: 2.5rem;
   }
 
-  .app-sidebar-right.collapsed > .relative > .sidebar-collapse-button {
-    width: 2.2rem;
-    height: 2.2rem;
-    min-width: 1.8rem;
-    min-height: 1.8rem;
-    font-size: 1rem;
-    padding: 0.25rem 0.25rem;
-  }
   .app-main-row {
     margin-top: 125px;
     padding: 20px;
@@ -255,7 +247,7 @@
 }
 @media (max-width: 568px) {
   .app-main-row {
-    margin-top: 127px;
+    margin-top: 135px;
     padding: 10px;
   }
   .sidebar-collapse-button {
